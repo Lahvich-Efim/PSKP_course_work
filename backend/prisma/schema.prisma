@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int          @id @default(autoincrement())
+  username    String       @unique
+  email       String       @unique
+  password    String
+  role        Role
+  participant Participant?
+  coordinator Coordinator?
+
+  @@map("users")
+}
+
+enum Role {
+  COORDINATOR
+  PARTICIPANT
+}
+
+model Coordinator {
+  id   Int    @id @unique
+  name String
+  user User   @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("coordinators")
+}
+
+model Participant {
+  id          Int       @id @unique
+  name        String
+  description String?
+  user        User      @relation(fields: [id], references: [id], onDelete: Cascade)
+  products    Product[]
+
+  @@map("participants")
+}
+
+model Product {
+  id             Int         @id @default(autoincrement())
+  participant_id Int
+  unit           String
+  name           String
+  participant    Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+  catalogs       Catalog[]
+
+  @@map("product")
+}
+
+model Catalog {
+  id             Int            @id @default(autoincrement())
+  product_id     Int
+  plan_id        Int
+  desired_volume Float
+  product        Product        @relation(fields: [product_id], references: [id])
+  plan           ProductionPlan @relation(fields: [plan_id], references: [id])
+  supplier       Supply[]       @relation("SupplierRelation")
+  consumer       Supply[]       @relation("ConsumerRelation")
+
+  @@unique([plan_id, product_id])
+  @@map("catalogs")
+}
+
+model Supply {
+  id                  Int                   @id @default(autoincrement())
+  supplier_catalog_id Int
+  consumer_catalog_id Int
+  cost_factor         Float
+  supplier_catalog    Catalog               @relation(fields: [supplier_catalog_id], references: [id], onDelete: Cascade, name: "SupplierRelation")
+  consumer_catalog    Catalog               @relation(fields: [consumer_catalog_id], references: [id], onDelete: Cascade, name: "ConsumerRelation")
+  production_detail   ProductionPlanDetail?
+
+  @@map("supplies")
+}
+
+model ProductionPlan {
+  id       Int                    @id @default(autoincrement())
+  period   DateTime
+  status   StatusProductionPlan
+  catalogs Catalog[]
+  details  ProductionPlanDetail[]
+
+  @@map("production_plans")
+}
+
+enum StatusProductionPlan {
+  OPEN
+  FINALIZED
+  ARCHIVED
+}
+
+model ProductionPlanDetail {
+  id           Int            @id @default(autoincrement())
+  plan_id      Int
+  supply_id    Int            @unique
+  final_amount Float
+  plan         ProductionPlan @relation(fields: [plan_id], references: [id])
+  supply       Supply         @relation(fields: [supply_id], references: [id])
+
+  @@map("production_plan_details")
+}
