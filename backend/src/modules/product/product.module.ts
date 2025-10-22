@@ -6,9 +6,15 @@ import { PRODUCT_REPOSITORY } from './product.interface';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SharedModule } from '../../shared/services/shared.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { ParticipantModule } from '../participant/participant.module';
 
 @Module({
-    imports: [PrismaModule, forwardRef(() => CatalogModule), SharedModule],
+    imports: [
+        PrismaModule,
+        forwardRef(() => CatalogModule),
+        ParticipantModule,
+        SharedModule,
+    ],
     controllers: [ProductController],
     providers: [
         ProductService,

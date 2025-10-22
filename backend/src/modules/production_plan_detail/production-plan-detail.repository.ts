@@ -7,6 +7,7 @@ import {
     UpdateProductionPlanDetail,
 } from './production-plan-detail.interface';
 import { ProductionPlanDetail } from './production-plan-detail.entity';
+import { ProductionPlanFilter } from '../production_plan/production-plan.interface';
 
 @Injectable()
 export class ProductionPlanDetailRepository
@@ -76,5 +77,12 @@ export class ProductionPlanDetailRepository
         return this.prisma.productionPlanDetail.count({
             where,
         });
+    }
+
+    async deleteMany(where?: ProductionPlanDetailFilter): Promise<number> {
+        const result = await this.prisma.productionPlanDetail.deleteMany({
+            where,
+        });
+        return result.count;
     }
 }

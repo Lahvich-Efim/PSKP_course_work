@@ -9,16 +9,16 @@ export class ProductionPlanService extends ApiClient {
         offset?: number;
         limit?: number;
     }) {
-        return this.get<ProductionPlan>('/production-plans', params);
+        return this.get<ProductionPlan>('/plans', params);
     }
 
     async createProductionPlan(
         dto: createProductionPlan,
     ): Promise<ProductionPlan> {
-        return this.post<ProductionPlan>('/production-plans', dto);
+        return this.post<ProductionPlan>('/plans', dto);
     }
 
     async calculateProductionPlan(): Promise<ProductionPlan> {
-        return this.get<ProductionPlan>('/production-plans/calculate');
+        return this.get<ProductionPlan>('/plans/calculate');
     }
 }

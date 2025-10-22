@@ -6,7 +6,7 @@ import {
     NotFoundError,
     SupplyException,
 } from '../../shared/exceptions/exceptions';
-import { PaginatedResult } from '../../shared/pagination.interface';
+import { PaginatedResult } from '../../shared/interfaces/pagination.interface';
 import {
     CreateSupply,
     ISupplyRepository,
@@ -31,14 +31,22 @@ export class SupplyService {
     private buildFilter(user: UserData, plan?: ProductionPlan): SupplyFilter {
         const filter: SupplyFilter = {};
         if (plan) {
-            filter.supplier_catalog = { plan_id: plan.id };
-            filter.consumer_catalog = { plan_id: plan.id };
+            filter.supplier_catalog = { is: { plan_id: plan.id } };
+            filter.consumer_catalog = { is: { plan_id: plan.id } };
         }
 
         if (user.role === 'PARTICIPANT') {
             filter.OR = [
-                { consumer_catalog: { product: { participant_id: user.id } } },
-                { supplier_catalog: { product: { participant_id: user.id } } },
+                {
+                    consumer_catalog: {
+                        is: { product: { participant_id: user.id } },
+                    },
+                },
+                {
+                    supplier_catalog: {
+                        is: { product: { participant_id: user.id } },
+                    },
+                },
             ];
         } else if (user.role !== 'COORDINATOR') {
             throw new AccessDeniedError('Нет доступа к поставкам');
@@ -137,7 +145,9 @@ export class SupplyService {
                 supplier_catalog_id: dto.supplier_catalog_id,
             })
         ) {
-            throw new EntityAlreadyExistError('Такая поставка уже существует!');
+            throw new EntityAlreadyExistError(
+                'Данная поставка уже существует!',
+            );
         }
 
         const raw = await this.supplyRepo.create({ ...dto });
@@ -160,10 +170,18 @@ export class SupplyService {
         const conflict = await this.supplyRepo.findOne({
             consumer_catalog_id: dto.consumer_catalog_id,
             supplier_catalog_id: dto.supplier_catalog_id,
-            OR: [{ id: dto.id }],
+            NOT: { id: dto.id },
         });
+        console.log({
+            consumer_catalog_id: dto.consumer_catalog_id,
+            supplier_catalog_id: dto.supplier_catalog_id,
+            id: dto.id,
+        });
+        console.log(conflict);
         if (conflict) {
-            throw new EntityAlreadyExistError('Такая поставка уже существует!');
+            throw new EntityAlreadyExistError(
+                'Данная поставка уже существует!',
+            );
         }
 
         const updated = await this.supplyRepo.update({

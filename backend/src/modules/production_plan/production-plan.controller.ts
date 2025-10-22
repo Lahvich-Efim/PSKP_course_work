@@ -4,55 +4,82 @@ import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { ProductionPlanResponseDto } from './dto/production-plan-response.dto';
 import { CurrentUser } from '../../shared/decorators/current_user.decorator';
 import { PaginationDto } from '../../shared/dto/pagination.dto';
-import { plainToInstance } from 'class-transformer';
 import { UserData } from '../users/user.entity';
+import {
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiCookieAuth,
+    ApiCreatedResponse,
+    ApiForbiddenResponse,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiTags,
+    ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
-@Controller('production-plans')
+@ApiBearerAuth()
+@ApiCookieAuth()
+@ApiTags('Production Plans')
+@Controller('plans')
 export class ProductionPlanController {
     constructor(
         private readonly productionPlanService: ProductionPlanService,
     ) {}
 
     @Get()
+    @ApiOperation({ summary: 'Get the last production plan' })
+    @ApiOkResponse({
+        description: 'Successfully retrieved the last production plan',
+        type: ProductionPlanResponseDto,
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
+    @ApiNotFoundResponse({ description: 'Production plan not found' })
     async getActualityProductionPlan(
         @Query() { offset, limit }: PaginationDto,
         @CurrentUser() user: UserData,
-    ): Promise<ProductionPlanResponseDto> {
-        const planData = await this.productionPlanService.getLastProductionPlan(
+    ): Promise<ProductionPlanResponseDto | null> {
+        return await this.productionPlanService.getLastProductionPlan(
             user,
             offset,
             limit,
         );
-        return plainToInstance(ProductionPlanResponseDto, {
-            ...planData,
-            period: planData.period.toISOString(),
-        });
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a new production plan' })
+    @ApiCreatedResponse({
+        description: 'The production plan has been successfully created.',
+        type: ProductionPlanResponseDto,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid input data' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async createProductionPlan(
         @Body() params: CreateProductionPlanDto,
         @CurrentUser() user: UserData,
-    ): Promise<ProductionPlanResponseDto> {
-        const plan = await this.productionPlanService.createProductionPlan(
+    ): Promise<ProductionPlanResponseDto | null> {
+        return await this.productionPlanService.createProductionPlan(
             params,
             user,
         );
-        return {
-            ...plan,
-            period: plan.period.toISOString(),
-        };
     }
 
     @Get('calculate')
+    @ApiOperation({ summary: 'Calculate the production plan' })
+    @ApiOkResponse({
+        description: 'Production plan calculated successfully',
+        type: ProductionPlanResponseDto,
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
+    @ApiBadRequestResponse({
+        description: 'Plan already calculated or invalid state',
+    })
     async calculateProductionPlan(
         @CurrentUser() user: UserData,
-    ): Promise<ProductionPlanResponseDto> {
-        const plan =
-            await this.productionPlanService.calculateProductionPlan(user);
-        return {
-            ...plan,
-            period: plan.period.toISOString(),
-        };
+    ): Promise<ProductionPlanResponseDto | null> {
+        return await this.productionPlanService.calculateProductionPlan(user);
     }
 }

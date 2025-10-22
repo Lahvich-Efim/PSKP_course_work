@@ -2,7 +2,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import BcryptService from '../../shared/utils/bcrypt-wrapper';
 import { UserService } from '../users/user.service';
-import { LoginDto, RegisterUserDto } from './auth.dto';
+import { LoginDto, RegisterUserDto } from './dto/auth.dto';
 import { JwtPayload, Tokens } from './auth.entity';
 import {
     JWT_ACCESS_SERVICE,
@@ -11,15 +11,34 @@ import {
 import { User } from '../users/user.entity';
 import {
     AuthException,
+    EntityAlreadyExistError,
     UnauthorizedError,
 } from '../../shared/exceptions/exceptions';
+import { PrismaService } from '../prisma/prisma.service';
+import { IUserRepository, USER_REPOSITORY } from '../users/user.interface';
+import {
+    IParticipantRepository,
+    PARTICIPANT_REPOSITORY,
+} from '../participant/participant.interface';
+import {
+    COORDINATOR_REPOSITORY,
+    ICoordinatorRepository,
+} from '../coordinator/coordinator.interface';
+import { Participant } from '../participant/participant.entity';
+import { Coordinator } from '../coordinator/coordinator.entity';
 
 @Injectable()
 export class AuthService {
     constructor(
         @Inject(JWT_REFRESH_SERVICE) private jwtRefreshService: JwtService,
         @Inject(JWT_ACCESS_SERVICE) private jwtAccessService: JwtService,
+        @Inject(USER_REPOSITORY) private userRepository: IUserRepository,
+        @Inject(COORDINATOR_REPOSITORY)
+        private coordinatorRepository: ICoordinatorRepository,
+        @Inject(PARTICIPANT_REPOSITORY)
+        private participantRepository: IParticipantRepository,
         private userService: UserService,
+        private prisma: PrismaService,
     ) {}
 
     private async generateTokens(user: User): Promise<Tokens> {
@@ -48,9 +67,7 @@ export class AuthService {
 
         const user = await this.userService.getUserById(payload.id, true);
         if (!user) {
-            throw new UnauthorizedException(
-                'Пользователь не найден! Переавторизуйтесь!',
-            );
+            throw new UnauthorizedException('Пользователь не найден!');
         }
         return await this.generateTokens(user);
     }
@@ -71,8 +88,65 @@ export class AuthService {
     }
 
     async register(dto: RegisterUserDto) {
-        return await this.userService.createUser({
-            ...dto,
+        const existingUser = await this.userRepository.findOne({
+            OR: [{ username: dto.username }, { email: dto.email }],
+        });
+
+        if (existingUser) {
+            if (existingUser.email === dto.email) {
+                throw new EntityAlreadyExistError(
+                    'Пользователь с данной почтой уже существует',
+                );
+            }
+            if (existingUser.username === dto.username) {
+                throw new EntityAlreadyExistError(
+                    'Пользователь с данным логином уже существует',
+                );
+            }
+            throw new EntityAlreadyExistError('Пользователь уже существует');
+        }
+
+        return await this.prisma.$transaction(async (tx) => {
+            const hasPassword = await BcryptService.hash(
+                dto.password,
+                BcryptService.genSaltSync(10),
+            );
+            const user = await tx.user.create({
+                data: {
+                    username: dto.username,
+                    email: dto.email,
+                    password: hasPassword,
+                    role: dto.role,
+                },
+                omit: {
+                    password: true,
+                },
+            });
+
+            if (dto.role === 'COORDINATOR') {
+                const profile: Coordinator = (await tx.coordinator.create({
+                    data: {
+                        id: user.id,
+                        name: dto.name,
+                    },
+                })) as Coordinator;
+                return {
+                    user,
+                    profile,
+                };
+            } else if (dto.role === 'PARTICIPANT') {
+                const profile: Participant = (await tx.participant.create({
+                    data: {
+                        id: user.id,
+                        name: dto.name,
+                        description: dto.description || null,
+                    },
+                })) as Participant;
+                return {
+                    user,
+                    profile,
+                };
+            }
         });
     }
 }

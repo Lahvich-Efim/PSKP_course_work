@@ -2,6 +2,7 @@ import { useInvalidateMutation } from './useInvalidateMutation';
 import type { Participant } from '@/models/participant';
 import { ParticipantService } from '@/service/PatricipantService.ts';
 import { AuthService } from '@/service/AuthService.ts';
+import type { Coordinator } from '@/models/coordinator.ts';
 
 const participantService = new ParticipantService();
 const authService = new AuthService();
@@ -35,22 +36,21 @@ export interface RegisterParticipantInput {
 }
 
 export function useRegisterParticipant(onDone?: () => void) {
-    return useInvalidateMutation<RegisterParticipantInput, Participant>({
+    return useInvalidateMutation<
+        RegisterParticipantInput,
+        Participant | Coordinator
+    >({
         mutationFn: async (input) => {
-            const user = await authService.register({
+            const { profile } = await authService.register({
                 username: input.username,
                 email: input.email,
                 password: input.password,
                 role: 'PARTICIPANT',
-            });
-
-            return participantService.createParticipant({
-                id: user.id,
                 name: input.name,
                 description: input.description,
             });
+            return profile;
         },
-
         invalidateKeys: [['participants']],
         onSuccessCallback: onDone,
     });

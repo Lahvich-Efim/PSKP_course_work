@@ -5,4 +5,6 @@ export type Product = {
     participant_id: number;
 };
 
-export type ProductData = Omit<Product, 'participant_id'>;
+export type ProductData = Omit<Product, 'participant_id'> & {
+    participant_name: string;
+};

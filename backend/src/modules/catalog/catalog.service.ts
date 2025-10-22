@@ -7,7 +7,7 @@ import {
     EntityAlreadyExistError,
     NotFoundError,
 } from '../../shared/exceptions/exceptions';
-import { PaginatedResult } from '../../shared/pagination.interface';
+import { PaginatedResult } from '../../shared/interfaces/pagination.interface';
 import {
     IParticipantRepository,
     PARTICIPANT_REPOSITORY,
@@ -43,7 +43,7 @@ export class CatalogService {
             filter.plan_id = plan.id;
         }
         if (user.role === 'PARTICIPANT') {
-            filter.product = { participant_id: user.id };
+            filter.product = { is: { participant_id: user.id } };
         } else if (user.role !== 'COORDINATOR') {
             throw new AccessDeniedError('Нет доступа к каталогу');
         }
@@ -53,18 +53,18 @@ export class CatalogService {
     private async toCatalogData(c: Catalog): Promise<CatalogData> {
         const product = await this.productRepo.findOneById(c.product_id);
         if (!product) throw new Error('Продукт не найден');
-        const participant = await this.participantRepo.findOneById(
-            product.participant_id,
-        );
+        const { participant_id, ...prod } = product;
+        const participant =
+            await this.participantRepo.findOneById(participant_id);
         if (!participant) throw new Error('Участник не найден');
 
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { participant_id, ...prod } = product;
         return {
             id: c.id,
             desired_volume: c.desired_volume,
-            product: prod,
-            participant: participant.name,
+            product: {
+                ...prod,
+                participant_name: participant.name,
+            },
         };
     }
 
@@ -75,7 +75,7 @@ export class CatalogService {
     ): Promise<CatalogData> {
         const filter = this.buildFilter(user, plan);
         const catalog = await this.catalogRepo.findOneById(id, filter);
-        if (!catalog) throw new NotFoundError(`Каталог ${id} не найден`);
+        if (!catalog) throw new NotFoundError(`Каталог не найден!`);
         return this.toCatalogData(catalog);
     }
 
@@ -116,7 +116,9 @@ export class CatalogService {
     async createCatalog(dto: CreateCatalogDto, user: UserData) {
         const plan = await this.planContext.ensurePlanIsOpen();
         if (user.role !== 'PARTICIPANT') {
-            throw new AccessDeniedError('Нет доступа на создание');
+            throw new AccessDeniedError(
+                'Только участник может выставить каталог продуктов!',
+            );
         }
         if (
             await this.catalogRepo.findOne({
@@ -124,7 +126,7 @@ export class CatalogService {
                 plan_id: plan.id,
             })
         ) {
-            throw new EntityAlreadyExistError('Каталог уже существует');
+            throw new EntityAlreadyExistError('Каталог уже существует!');
         }
 
         const raw = await this.catalogRepo.create({ plan_id: plan.id, ...dto });
@@ -140,7 +142,7 @@ export class CatalogService {
             data.id,
             this.buildFilter(user, plan),
         );
-        if (!exists) throw new AccessDeniedError('Нет доступа на обновление');
+        if (!exists) throw new NotFoundError('Данный каталог не существует!');
         const updated = await this.catalogRepo.update({
             ...data,
             plan_id: plan.id,
@@ -154,7 +156,7 @@ export class CatalogService {
             id,
             this.buildFilter(user, plan),
         );
-        if (!exists) throw new AccessDeniedError('Нет доступа на удаление');
+        if (!exists) throw new NotFoundError('Данный каталог не существует!');
         return await this.catalogRepo.delete(id);
     }
 }

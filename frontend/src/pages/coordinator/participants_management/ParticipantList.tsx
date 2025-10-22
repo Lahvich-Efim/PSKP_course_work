@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
     Table,
     TableHeader,
@@ -8,17 +8,18 @@ import {
     TableCell,
 } from '@/components/ui/table';
 import { useParticipants } from '@/hooks/query/useParticipants';
-import { useCatalogs } from '@/hooks/query/useCatalogs';
-import {
-    useDeleteParticipant,
-    useUpdateParticipant,
-} from '@/hooks/mutation/useParticipantsMutations';
+import { useDeleteParticipant } from '@/hooks/mutation/useParticipantsMutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PaginationBar } from '@/components/PaginationBar';
+import PaginationBar from '@/components/PaginationBar';
+import { useFormErrors } from '@/hooks/useFormErrors.ts';
 
-export default function ParticipantList() {
+export default function ParticipantList({
+    onEdit,
+}: {
+    onEdit: (p: any) => void;
+}) {
     const [page, setPage] = useState(0);
     const limit = 10;
 
@@ -27,39 +28,16 @@ export default function ParticipantList() {
         count,
         isLoading,
     } = useParticipants(page, limit);
-    const update = useUpdateParticipant(() => cancelEdit());
     const remove = useDeleteParticipant();
+    const { handleError, resetErrors } = useFormErrors(true);
 
-    const { items: allCatalogs } = useCatalogs(0, 10000);
-
-    const blockedParticipants = useMemo(() => {
-        const s = new Set<number>();
-        allCatalogs.forEach((cat) => {
-            const owner = participants.find((p) => p.name === cat.participant);
-            if (owner) s.add(owner.id);
-        });
-        return s;
-    }, [allCatalogs, participants]);
-
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [form, setForm] = useState({ name: '', description: '' });
-
-    const startEdit = (p) => {
-        setEditingId(p.id);
-        setForm({ name: p.name, description: p.description || '' });
-    };
-    const cancelEdit = () => {
-        setEditingId(null);
-        setForm({ name: '', description: '' });
-    };
-    const saveEdit = () => {
-        if (editingId !== null) {
-            update.mutate({ id: editingId, data: form });
-        }
-    };
     const deleteParticipant = (id: number) => {
-        if (blockedParticipants.has(id)) return;
-        if (confirm('Удалить участника?')) remove.mutate(id);
+        if (confirm('Удалить участника?')) {
+            resetErrors();
+            remove.mutate(id, {
+                onError: handleError,
+            });
+        }
     };
 
     if (isLoading) return <div>Загрузка...</div>;
@@ -78,79 +56,26 @@ export default function ParticipantList() {
                 <TableBody>
                     {participants.map((p) => (
                         <TableRow key={p.id}>
-                            <TableCell>
-                                {editingId === p.id ? (
-                                    <Input
-                                        value={form.name}
-                                        onChange={(e) =>
-                                            setForm({
-                                                ...form,
-                                                name: e.target.value,
-                                            })
-                                        }
-                                    />
-                                ) : (
-                                    p.name
-                                )}
-                            </TableCell>
+                            <TableCell>{p.name}</TableCell>
                             <TableCell>{p.user.email}</TableCell>
-                            <TableCell>
-                                {editingId === p.id ? (
-                                    <Textarea
-                                        value={form.description}
-                                        onChange={(e) =>
-                                            setForm({
-                                                ...form,
-                                                description: e.target.value,
-                                            })
-                                        }
-                                    />
-                                ) : (
-                                    p.description || '-'
-                                )}
-                            </TableCell>
+                            <TableCell>{p.description || '-'}</TableCell>
                             <TableCell className="text-right space-x-2">
-                                {editingId === p.id ? (
-                                    <>
-                                        <Button size="sm" onClick={saveEdit}>
-                                            Сохранить
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={cancelEdit}
-                                        >
-                                            Отмена
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => startEdit(p)}
-                                        >
-                                            Редактировать
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onClick={() =>
-                                                deleteParticipant(p.id)
-                                            }
-                                            disabled={blockedParticipants.has(
-                                                p.id,
-                                            )}
-                                            title={
-                                                blockedParticipants.has(p.id)
-                                                    ? 'У участника есть каталоги — удалить нельзя'
-                                                    : undefined
-                                            }
-                                        >
-                                            Удалить
-                                        </Button>
-                                    </>
-                                )}
+                                <>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => onEdit(p)}
+                                    >
+                                        Редактировать
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => deleteParticipant(p.id)}
+                                    >
+                                        Удалить
+                                    </Button>
+                                </>
                             </TableCell>
                         </TableRow>
                     ))}
@@ -161,7 +86,7 @@ export default function ParticipantList() {
                 <PaginationBar
                     page={page}
                     totalPages={Math.ceil(count / limit)}
-                    setPage={setPage}
+                    onChangePage={setPage}
                 />
             </div>
         </>

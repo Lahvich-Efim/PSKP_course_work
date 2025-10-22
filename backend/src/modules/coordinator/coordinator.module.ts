@@ -15,6 +15,6 @@ import { PrismaModule } from '../prisma/prisma.module';
             useClass: CoordinatorRepository,
         },
     ],
-    exports: [CoordinatorService],
+    exports: [COORDINATOR_REPOSITORY],
 })
 export class CoordinatorModule {}

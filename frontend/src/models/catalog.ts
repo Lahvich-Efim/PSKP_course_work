@@ -4,7 +4,6 @@ export interface Catalog {
     id: number;
     product: Product;
     desired_volume: number;
-    participant: string;
 }
 
 export interface createCatalog {

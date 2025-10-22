@@ -1,18 +1,21 @@
 import { Catalog } from './catalog.entity';
 
-import { ProductFilter } from '../product/product.interface';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
+import { Product } from '../product/product.entity';
+import { ProductionPlan } from '../production_plan/production-plan.entity';
 
 export type CreateCatalog = Omit<Catalog, 'id'>;
 export type UpdateCatalog = Partial<CreateCatalog> & {
     id: number;
 };
-
 export const CATALOG_REPOSITORY = 'ICatalogRepository';
 
-export interface CatalogFilter extends Partial<Catalog> {
-    OR?: CatalogFilter[];
-    product?: ProductFilter;
+export interface CatalogRelations {
+    product: Product;
+    plan: ProductionPlan;
 }
+
+export type CatalogFilter = EntityFilter<Catalog, CatalogRelations>;
 
 export interface ICatalogRepository {
     findOneById(
@@ -31,6 +34,8 @@ export interface ICatalogRepository {
     create(catalog: CreateCatalog): Promise<Catalog>;
 
     createMany(catalogs: CreateCatalog[]): Promise<number>;
+
+    deleteMany(where: CatalogFilter): Promise<number>;
 
     update(catalog: UpdateCatalog): Promise<Catalog>;
 

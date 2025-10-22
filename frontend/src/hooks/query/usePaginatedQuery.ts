@@ -1,8 +1,4 @@
-import {
-    useQuery,
-    type QueryKey,
-    keepPreviousData,
-} from '@tanstack/react-query';
+import { useQuery, type QueryKey } from '@tanstack/react-query';
 
 export interface Paginated<T> {
     count: number;
@@ -34,7 +30,6 @@ export function usePaginatedQuery<TParams extends PaginationParams, T>({
     const { data, isLoading, isError, isSuccess, refetch } = useQuery({
         queryKey,
         queryFn: () => fetchFn(params),
-        placeholderData: keepPreviousData,
         enabled,
     });
 

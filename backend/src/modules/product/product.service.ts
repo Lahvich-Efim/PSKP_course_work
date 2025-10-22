@@ -8,9 +8,11 @@ import { Product, ProductData } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import {
     AccessDeniedError,
+    EntityAlreadyExistError,
     NotFoundError,
+    UnknownError,
 } from '../../shared/exceptions/exceptions';
-import { PaginatedResult } from '../../shared/pagination.interface';
+import { PaginatedResult } from '../../shared/interfaces/pagination.interface';
 import { UserData } from '../users/user.entity';
 import { UpdateProduct } from './product.repository';
 import { PlanContextService } from '../../shared/services/plan-context.service';
@@ -18,7 +20,10 @@ import {
     CATALOG_REPOSITORY,
     ICatalogRepository,
 } from '../catalog/catalog.interface';
-// Удаляем импорт IProductionPlanRepository, так как теперь он инкапсулирован в PlanContextService
+import {
+    IParticipantRepository,
+    PARTICIPANT_REPOSITORY,
+} from '../participant/participant.interface';
 
 @Injectable()
 export class ProductService {
@@ -28,124 +33,83 @@ export class ProductService {
         private readonly planContext: PlanContextService,
         @Inject(CATALOG_REPOSITORY)
         private readonly catalogRepository: ICatalogRepository,
-        // Удаляем инъекцию productionPlanRepository
+        @Inject(PARTICIPANT_REPOSITORY)
+        private readonly participantRepository: IParticipantRepository,
     ) {}
 
-    private sanitize(product: Product): ProductData {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private async sanitize(product: Product): Promise<ProductData> {
         const { participant_id, ...rest } = product;
-        return rest;
+        const participant =
+            await this.participantRepository.findOneById(participant_id);
+        if (!participant) {
+            throw new UnknownError(
+                `Участник продукта '${product.name}' по какой то причине отсутствует`,
+            );
+        }
+        return {
+            ...rest,
+            participant_name: participant.name,
+        };
     }
 
     private async checkAccess(
         productId: number,
         user: UserData,
-    ): Promise<Product> {
-        const product = await this.repository.findOneById(productId);
-        if (!product)
-            throw new NotFoundError(`Продукт с id ${productId} не найден`);
+    ): Promise<void> {
+        if (user.role !== 'PARTICIPANT') {
+            throw new AccessDeniedError(
+                'Только участник может управлять продуктами!',
+            );
+        }
 
-        if (user.role === 'COORDINATOR') return product;
+        const product = await this.repository.findOne({
+            id: productId,
+        });
 
-        if (user.role === 'PARTICIPANT' && product.participant_id === user.id)
-            return product;
+        if (!product) {
+            throw new NotFoundError('Данный продукт не существует!');
+        }
 
-        throw new AccessDeniedError('Нет доступа к продукту');
+        if (product.participant_id !== user.id) {
+            throw new AccessDeniedError(
+                'Вы можете управлять только своими продуктами!',
+            );
+        }
+    }
+
+    private buildFilter(user: UserData): ProductFilter {
+        const filter: ProductFilter = {};
+        if (user.role === 'PARTICIPANT') {
+            filter.participant_id = user.id;
+        } else if (user.role !== 'COORDINATOR') {
+            throw new AccessDeniedError('Нет доступа к продуктам');
+        }
+        return filter;
     }
 
     async getProduct(productId: number, user: UserData): Promise<ProductData> {
-        const product = await this.checkAccess(productId, user);
-        return this.sanitize(product);
-    }
+        const where: ProductFilter = this.buildFilter(user);
 
-    async getActualProduct(
-        productId: number,
-        user: UserData,
-    ): Promise<ProductData> {
-        const [plan, archivedPlanIds] = await Promise.all([
-            this.planContext.getCurrentPlan(),
-            this.planContext.getArchivedPlanIds(), // Используем новый метод из PlanContextService
-        ]);
-
-        const archivedCatalogs = await this.catalogRepository.findMany({
-            OR: archivedPlanIds.map((id) => ({ plan_id: id })),
-            product_id: productId,
-        });
-
-        if (archivedCatalogs.length > 0) {
-            throw new NotFoundError(
-                `Продукт с id ${productId} находится в архивированном плане`,
-            );
+        const product = await this.repository.findOne(where);
+        if (!product) {
+            throw new NotFoundError('Данный продукт не найден!');
         }
-
-        const catalog = await this.catalogRepository.findOne({
-            plan_id: plan.id,
-            product_id: productId,
-        });
-
-        if (!catalog) {
-            throw new NotFoundError(
-                `Актуальный продукт с id ${productId} не найден в текущем плане`,
-            );
-        }
-
-        const product = await this.checkAccess(productId, user);
         return this.sanitize(product);
     }
 
     async getProducts(
         user: UserData,
-        offset = 0,
-        limit = 10,
-    ): Promise<PaginatedResult<ProductData>> {
-        const where =
-            user.role === 'PARTICIPANT' ? { participant_id: user.id } : {};
-
-        const [rawItems, count] = await Promise.all([
-            this.repository.findMany(where, offset, limit),
-            this.repository.count(where),
-        ]);
-
-        const items = rawItems.map((p) => this.sanitize(p));
-        return { count, items };
-    }
-
-    async getActualProducts(
-        user: UserData,
         offset?: number,
         limit?: number,
     ): Promise<PaginatedResult<ProductData>> {
-        const archivedPlanIds = await this.planContext.getArchivedPlanIds();
-
-        let archivedProductIds: number[] = [];
-        if (archivedPlanIds.length > 0) {
-            const archivedCatalogs = await this.catalogRepository.findMany({
-                OR: archivedPlanIds.map((id) => ({ plan_id: id })),
-            });
-            archivedProductIds = Array.from(
-                new Set(archivedCatalogs.map((c) => c.product_id)),
-            );
-        }
-
-        const where: ProductFilter = {};
-        if (user.role === 'PARTICIPANT') {
-            where.participant_id = user.id;
-        } else if (user.role !== 'COORDINATOR') {
-            throw new AccessDeniedError('Нет доступа к продуктам');
-        }
+        const where: ProductFilter = this.buildFilter(user);
 
         const [rawItems, count] = await Promise.all([
             this.repository.findMany(where, offset, limit),
             this.repository.count(where),
         ]);
-
-        // Фильтруем продукты, которые находятся в архивированных планах
-        const filteredItems = rawItems.filter(
-            (product) => !archivedProductIds.includes(product.id),
-        );
-
-        const items = filteredItems.map((p) => this.sanitize(p));
-        return { count: filteredItems.length, items };
+        const items = await Promise.all(rawItems.map((p) => this.sanitize(p)));
+        return { count, items };
     }
 
     async createProduct(
@@ -156,6 +120,15 @@ export class ProductService {
         if (user.role !== 'PARTICIPANT')
             throw new AccessDeniedError(
                 'Только участник может создать продукт',
+            );
+
+        if (
+            await this.repository.isExists({
+                name: dto.name,
+            })
+        )
+            throw new EntityAlreadyExistError(
+                'Продукт с таким именем уже существует!',
             );
 
         const product = await this.repository.create({
@@ -172,6 +145,15 @@ export class ProductService {
     ): Promise<ProductData> {
         await this.planContext.ensurePlanIsOpen();
         await this.checkAccess(dto.id, user);
+        if (
+            await this.repository.isExists({
+                name: dto.name,
+            })
+        )
+            throw new EntityAlreadyExistError(
+                'Продукт с таким именем уже существует!',
+            );
+
         const updated = await this.repository.update(dto);
         return this.sanitize(updated);
     }
@@ -182,6 +164,17 @@ export class ProductService {
     ): Promise<ProductData> {
         await this.planContext.ensurePlanIsOpen();
         await this.checkAccess(productId, user);
+        const existing_catalog = await this.catalogRepository.count({
+            product_id: productId,
+            product: {
+                is: {},
+            },
+        });
+        if (existing_catalog > 0) {
+            throw new EntityAlreadyExistError(
+                'Нельзя удалить продукт с выставленным каталогом',
+            );
+        }
         const deleted = await this.repository.delete(productId);
         return this.sanitize(deleted);
     }

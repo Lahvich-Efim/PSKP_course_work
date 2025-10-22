@@ -1,7 +1,8 @@
 import { ProductionPlanDetail } from './production-plan-detail.entity';
-import { ProductionPlanFilter } from '../production_plan/production-plan.interface';
+import { ProductionPlan } from '../production_plan/production-plan.entity';
+import { Supply } from '../supply/supply.entity';
 
-import { SupplyFilter } from '../supply/supply.interface';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
 
 export type CreateProductionPlanDetail = Omit<ProductionPlanDetail, 'id'>;
 export type UpdateProductionPlanDetail = Partial<
@@ -11,12 +12,15 @@ export type UpdateProductionPlanDetail = Partial<
 export const PRODUCTION_PLAN_DETAIL_REPOSITORY =
     'IProductionPlanDetailRepository';
 
-export interface ProductionPlanDetailFilter
-    extends Partial<ProductionPlanDetail> {
-    OR?: ProductionPlanDetailFilter[];
-    plan?: ProductionPlanFilter;
-    supply?: SupplyFilter;
+interface ProductionPlanDetailRelations {
+    plan: ProductionPlan;
+    supply: Supply;
 }
+
+export type ProductionPlanDetailFilter = EntityFilter<
+    ProductionPlanDetail,
+    ProductionPlanDetailRelations
+>;
 
 export interface IProductionPlanDetailRepository {
     findOneById(
@@ -34,11 +38,17 @@ export interface IProductionPlanDetailRepository {
         limit?: number,
     ): Promise<ProductionPlanDetail[]>;
 
-    create(product: CreateProductionPlanDetail): Promise<ProductionPlanDetail>;
+    create(
+        productionPlanDetailId: CreateProductionPlanDetail,
+    ): Promise<ProductionPlanDetail>;
 
-    update(product: UpdateProductionPlanDetail): Promise<ProductionPlanDetail>;
+    deleteMany(where: ProductionPlanDetailFilter): Promise<number>;
 
-    delete(productId: number): Promise<ProductionPlanDetail>;
+    update(
+        productionPlanDetailId: UpdateProductionPlanDetail,
+    ): Promise<ProductionPlanDetail>;
+
+    delete(productionPlanDetailId: number): Promise<ProductionPlanDetail>;
 
     count(where?: ProductionPlanDetailFilter): Promise<number>;
 }

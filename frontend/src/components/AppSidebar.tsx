@@ -8,27 +8,27 @@ import {
     SidebarMenuItem,
     SidebarMenuButton,
 } from '@/components/ui/sidebar';
-import { Home, Users, Package, Book, Box, Menu } from 'lucide-react';
+import { Home, Users, Boxes, BookOpen, Truck } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAppSelector } from '@/hooks/hook_redux';
 import { cn } from '@/lib/utils';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
+import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
 
 const coordinatorNavItems = [
-    { label: 'Основная', path: '/coordinator', icon: Home },
+    { label: 'План Производства', path: '/coordinator', icon: Home },
     { label: 'Участники', path: '/coordinator/participants', icon: Users },
-    { label: 'Поставки', path: '/coordinator/supplies', icon: Package },
+    { label: 'Поставки', path: '/coordinator/supplies', icon: Truck },
+    { label: 'Продукты', path: '/coordinator/products', icon: Boxes },
 ];
 
 const participantNavItems = [
-    { label: 'Основная', path: '/participant', icon: Home },
-    { label: 'Каталоги', path: '/participant/catalogs', icon: Book },
-    { label: 'Продукты', path: '/participant/products', icon: Box },
+    { label: 'План Производства', path: '/participant', icon: Home },
+    { label: 'Каталоги', path: '/participant/catalogs', icon: BookOpen },
+    { label: 'Продукты', path: '/participant/products', icon: Boxes },
 ];
 
-export default function AppSidebar() {
+const AppSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { role } = useAppSelector((state) => state.auth);
@@ -90,4 +90,6 @@ export default function AppSidebar() {
             </div>
         </>
     );
-}
+};
+
+export default AppSidebar;

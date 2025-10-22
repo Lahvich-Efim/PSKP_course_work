@@ -1,4 +1,4 @@
-type Role = 'PARTICIPANT' | 'COORDINATOR';
+export type Role = 'COORDINATOR' | 'PARTICIPANT';
 
 export type User = {
     id: number;

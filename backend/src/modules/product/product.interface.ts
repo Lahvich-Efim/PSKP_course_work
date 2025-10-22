@@ -1,12 +1,18 @@
 import { Product } from './product.entity';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
+import { Catalog } from '../catalog/catalog.entity';
+import { User } from '../users/user.entity';
 
 export type CreateProduct = Omit<Product, 'id'>;
 export type UpdateProduct = Partial<Product> & { id: number };
 export const PRODUCT_REPOSITORY = 'IProductRepository';
 
-export interface ProductFilter extends Partial<Product> {
-    OR?: ProductFilter[];
+interface ProductRelations {
+    catalogs: Catalog[];
+    participant: User;
 }
+
+export type ProductFilter = EntityFilter<Product, ProductRelations>;
 
 export interface IProductRepository {
     findOneById(productId: number): Promise<Product | null>;

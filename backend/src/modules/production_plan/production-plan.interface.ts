@@ -1,13 +1,12 @@
 import { ProductionPlan, StatusPlan } from './production-plan.entity';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
 
 export type CreateProductionPlan = Omit<ProductionPlan, 'id'>;
 export type UpdateProductionPlan = Partial<ProductionPlan> & { id: number };
 
 export const PRODUCTION_PLAN_REPOSITORY = 'IProductionPlanRepository';
 
-export interface ProductionPlanFilter extends Partial<ProductionPlan> {
-    OR?: ProductionPlanFilter[];
-}
+export type ProductionPlanFilter = EntityFilter<ProductionPlan>;
 
 export interface IProductionPlanRepository {
     findOneById(planProductionId: number): Promise<ProductionPlan | null>;

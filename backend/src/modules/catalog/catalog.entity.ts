@@ -9,5 +9,4 @@ export type Catalog = {
 
 export type CatalogData = Omit<Catalog, 'plan_id' | 'product_id'> & {
     product: ProductData;
-    participant: string;
 };

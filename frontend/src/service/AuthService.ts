@@ -1,5 +1,7 @@
 import { ApiClient } from '@/api/ApiClient.ts';
 import type { User } from '@/models/user.ts';
+import type { Participant } from '@/models/participant.ts';
+import type { Coordinator } from '@/models/coordinator.ts';
 
 type Token = {
     access_token: string;
@@ -24,8 +26,13 @@ export class AuthService extends ApiClient {
         password: string;
         email: string;
         role: string;
-    }): Promise<User> {
-        return await this.post<User>('/auth/register', data);
+        name: string;
+        description?: string;
+    }): Promise<{ user: User; profile: Participant | Coordinator }> {
+        return await this.post<{
+            user: User;
+            profile: Participant | Coordinator;
+        }>('/auth/register', data);
     }
 
     async logout(): Promise<void> {

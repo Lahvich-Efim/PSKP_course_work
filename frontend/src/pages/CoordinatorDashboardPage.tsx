@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-    useProductionPlanMeta,
-    useProductionPlanCatalogs,
-} from '@/hooks/query/useProductionPlan';
+import { useProductionPlan } from '@/hooks/query/useProductionPlan';
 import {
     useCreateProductionPlan,
     useCalculateProductionPlan,
@@ -10,31 +7,20 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-    Accordion,
-    AccordionItem,
-    AccordionTrigger,
-    AccordionContent,
-} from '@/components/ui/accordion';
-import {
-    Table,
-    TableHeader,
-    TableHead,
-    TableBody,
-    TableRow,
-    TableCell,
-} from '@/components/ui/table';
-import { PaginationBar } from '@/components/PaginationBar';
+import PaginationBar from '@/components/PaginationBar';
+import CatalogsList from '@/components/CatalogsList.tsx';
+import { useFormErrors } from '@/hooks/useFormErrors.ts';
 
 export default function CoordinatorDashboardPage() {
     const pageSize = 10;
     const [page, setPage] = useState(0);
 
-    const { data: meta, isLoading: metaLoading } = useProductionPlanMeta();
-    const { data: catalogData, isLoading: catalogsLoading } =
-        useProductionPlanCatalogs(page, pageSize);
+    const { data: plan, isLoading: planLoading } = useProductionPlan(
+        page,
+        pageSize,
+    );
 
-    const getFinal = (cat: (typeof catalogData.items)[0]) =>
+    const getFinal = (cat: (typeof plan.items)[0]) =>
         (cat.supplies || []).reduce(
             (sum, s) =>
                 s.direction === 'outgoing' ? sum + (s.final_amount ?? 0) : sum,
@@ -43,12 +29,17 @@ export default function CoordinatorDashboardPage() {
 
     const createPlan = useCreateProductionPlan();
     const calculatePlan = useCalculateProductionPlan();
+    const { handleError, resetErrors } = useFormErrors(true);
 
-    const handleCreate = () => createPlan.mutate({ period: Date.now() });
-    const handleCalculate = () => calculatePlan.mutate();
+    const handleCreate = () => {
+        resetErrors();
+        createPlan.mutate({ period: Date.now() }, { onError: handleError });
+    };
+    const handleCalculate = () => {
+        calculatePlan.mutate(null, { onError: handleError });
+    };
 
-    const isFinalized = meta?.status === 'FINALIZED';
-
+    const isFinalized = plan?.status === 'FINALIZED';
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-extrabold mb-6">План производства</h1>
@@ -63,7 +54,7 @@ export default function CoordinatorDashboardPage() {
                             size="sm"
                             onClick={handleCreate}
                             disabled={
-                                createPlan.isPending || meta?.status === 'OPEN'
+                                createPlan.isPending || plan?.status === 'OPEN'
                             }
                         >
                             {createPlan.isPending
@@ -76,7 +67,7 @@ export default function CoordinatorDashboardPage() {
                             onClick={handleCalculate}
                             disabled={
                                 calculatePlan.isPending ||
-                                meta?.status !== 'OPEN'
+                                plan?.status !== 'OPEN'
                             }
                         >
                             {calculatePlan.isPending
@@ -86,17 +77,28 @@ export default function CoordinatorDashboardPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    {metaLoading ? (
+                    {planLoading ? (
                         <p>Загрузка...</p>
-                    ) : meta ? (
+                    ) : plan ? (
                         <div className="space-y-1">
                             <p>
-                                ID: <strong>{meta.id}</strong>
+                                ID: <strong>{plan.id}</strong>
                             </p>
                             <p>
                                 Период:{' '}
                                 <strong>
-                                    {new Date(meta.period).toLocaleDateString()}
+                                    {new Date(
+                                        plan.period,
+                                    ).toLocaleDateString() + ' '}
+                                    -
+                                    {' ' +
+                                        new Date(
+                                            new Date().setDate(
+                                                new Date(
+                                                    plan.period,
+                                                ).getDate() + 30,
+                                            ),
+                                        ).toLocaleDateString()}
                                 </strong>
                             </p>
                             <p>
@@ -107,7 +109,7 @@ export default function CoordinatorDashboardPage() {
                                     }
                                     className="uppercase"
                                 >
-                                    {meta.status}
+                                    {plan.status}
                                 </Badge>
                             </p>
                         </div>
@@ -117,7 +119,7 @@ export default function CoordinatorDashboardPage() {
                 </CardContent>
             </Card>
 
-            {meta && (
+            {plan && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-xl font-bold">
@@ -125,263 +127,23 @@ export default function CoordinatorDashboardPage() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {catalogsLoading ? (
+                        {planLoading ? (
                             <p>Загрузка каталогов...</p>
                         ) : (
-                            <Accordion
-                                type="single"
-                                collapsible
-                                className="space-y-2"
-                            >
-                                {catalogData?.items.map((catalog) => {
-                                    const totalProduced = getFinal(catalog);
-
-                                    const incoming = catalog.supplies.filter(
-                                        (s) => s.direction === 'incoming',
-                                    );
-                                    const outgoing = catalog.supplies.filter(
-                                        (s) => s.direction === 'outgoing',
-                                    );
-
-                                    return (
-                                        <AccordionItem
-                                            key={catalog.id}
-                                            value={catalog.id.toString()}
-                                        >
-                                            <AccordionTrigger className="flex justify-between">
-                                                <div>
-                                                    <div className="text-lg font-semibold">
-                                                        {catalog.product.name}
-                                                    </div>
-                                                    <div className="text-sm text-gray-500">
-                                                        {catalog.participant}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center space-x-2">
-                                                    {isFinalized ? (
-                                                        <>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="text-sm"
-                                                            >
-                                                                Внешняя:{' '}
-                                                                {
-                                                                    catalog.desired_volume
-                                                                }{' '}
-                                                                {
-                                                                    catalog
-                                                                        .product
-                                                                        .unit
-                                                                }
-                                                            </Badge>
-                                                            <p>+</p>
-                                                            <Badge
-                                                                variant="secondary"
-                                                                className="text-sm"
-                                                            >
-                                                                Внутренняя:{' '}
-                                                                {totalProduced}{' '}
-                                                                {
-                                                                    catalog
-                                                                        .product
-                                                                        .unit
-                                                                }
-                                                            </Badge>
-                                                            <p>=</p>
-                                                            <Badge
-                                                                variant="default"
-                                                                className="text-sm"
-                                                            >
-                                                                Итог:{' '}
-                                                                {totalProduced +
-                                                                    catalog.desired_volume}{' '}
-                                                                {
-                                                                    catalog
-                                                                        .product
-                                                                        .unit
-                                                                }
-                                                            </Badge>
-                                                        </>
-                                                    ) : (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="text-sm"
-                                                        >
-                                                            Ожидание расчета
-                                                            плана...
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </AccordionTrigger>
-
-                                            <AccordionContent>
-                                                <div className="mb-4">
-                                                    <p className="font-medium mb-1">
-                                                        Поставщики
-                                                    </p>
-                                                    {incoming.length > 0 ? (
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>
-                                                                        Участник
-                                                                    </TableHead>
-                                                                    <TableHead>
-                                                                        Коэф.
-                                                                        затрат
-                                                                    </TableHead>
-                                                                    <TableHead>
-                                                                        Внутр.
-                                                                        поставка
-                                                                    </TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {incoming.map(
-                                                                    (s) => (
-                                                                        <TableRow
-                                                                            key={
-                                                                                s.id
-                                                                            }
-                                                                        >
-                                                                            <TableCell>
-                                                                                {
-                                                                                    s
-                                                                                        .peer_catalog
-                                                                                        .participant
-                                                                                }{' '}
-                                                                                —{' '}
-                                                                                {
-                                                                                    s
-                                                                                        .peer_catalog
-                                                                                        .product
-                                                                                        .name
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell>
-                                                                                {
-                                                                                    s.cost_factor
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell>
-                                                                                {isFinalized
-                                                                                    ? (s.final_amount ??
-                                                                                      0)
-                                                                                    : '(ожидание)'}{' '}
-                                                                                {
-                                                                                    s
-                                                                                        .peer_catalog
-                                                                                        .product
-                                                                                        .unit
-                                                                                }
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    ),
-                                                                )}
-                                                            </TableBody>
-                                                        </Table>
-                                                    ) : (
-                                                        <p className="text-sm text-gray-500">
-                                                            Нет поставщиков
-                                                        </p>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <p className="font-medium mb-1">
-                                                        Потребители
-                                                    </p>
-                                                    {outgoing.length > 0 ? (
-                                                        <Table>
-                                                            <TableHeader>
-                                                                <TableRow>
-                                                                    <TableHead>
-                                                                        Участник
-                                                                    </TableHead>
-                                                                    <TableHead>
-                                                                        Коэф.
-                                                                        затрат
-                                                                    </TableHead>
-                                                                    <TableHead>
-                                                                        Внутр.
-                                                                        поставка
-                                                                    </TableHead>
-                                                                </TableRow>
-                                                            </TableHeader>
-                                                            <TableBody>
-                                                                {outgoing.map(
-                                                                    (s) => (
-                                                                        <TableRow
-                                                                            key={
-                                                                                s.id
-                                                                            }
-                                                                        >
-                                                                            <TableCell>
-                                                                                {
-                                                                                    s
-                                                                                        .peer_catalog
-                                                                                        .participant
-                                                                                }{' '}
-                                                                                —{' '}
-                                                                                {
-                                                                                    s
-                                                                                        .peer_catalog
-                                                                                        .product
-                                                                                        .name
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell>
-                                                                                {
-                                                                                    s.cost_factor
-                                                                                }
-                                                                            </TableCell>
-                                                                            <TableCell>
-                                                                                {isFinalized
-                                                                                    ? (s.final_amount ??
-                                                                                      0)
-                                                                                    : '(ожидание)'}{' '}
-                                                                                {
-                                                                                    catalog
-                                                                                        .product
-                                                                                        .unit
-                                                                                }
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    ),
-                                                                )}
-                                                            </TableBody>
-                                                        </Table>
-                                                    ) : (
-                                                        <p className="text-sm text-gray-500">
-                                                            Нет потребителей
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    );
-                                })}
-                            </Accordion>
+                            <CatalogsList
+                                catalogs={plan.items}
+                                isFinalized={isFinalized}
+                                getFinal={getFinal}
+                            />
                         )}
 
-                        {catalogData && (
-                            <div className="mt-4 flex justify-center">
-                                <PaginationBar
-                                    page={page}
-                                    totalPages={Math.ceil(
-                                        catalogData.count / pageSize,
-                                    )}
-                                    setPage={(fn) =>
-                                        setPage((prev) =>
-                                            typeof fn === 'function'
-                                                ? fn(prev)
-                                                : fn,
-                                        )
-                                    }
-                                />
-                            </div>
-                        )}
+                        <div className="mt-4 flex justify-center">
+                            <PaginationBar
+                                page={page}
+                                totalPages={Math.ceil(plan.count / pageSize)}
+                                onChangePage={setPage}
+                            />
+                        </div>
                     </CardContent>
                 </Card>
             )}

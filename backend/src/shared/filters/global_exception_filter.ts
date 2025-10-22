@@ -5,6 +5,7 @@ import {
     HttpException,
     HttpStatus,
     InternalServerErrorException,
+    Logger,
 } from '@nestjs/common';
 import { BaseAPIError } from '../exceptions/exceptions';
 import { HTTP_ERROR_TYPE } from '../decorators/http_error';
@@ -15,6 +16,8 @@ type HttpExceptionConstructor = new (message?: string) => HttpException;
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+    private readonly logger = new Logger(GlobalExceptionFilter.name);
+
     constructor(private readonly reflector: Reflector) {}
 
     catch(exception: unknown, host: ArgumentsHost): void {
@@ -34,6 +37,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             const status = exceptionClass.getStatus();
 
             if (!response.headersSent) {
+                this.logger.error(
+                    exception.message,
+                    exception.stack,
+                    exception.constructor?.name,
+                );
                 response.status(status).json({
                     statusCode: status,
                     message: exception.message,

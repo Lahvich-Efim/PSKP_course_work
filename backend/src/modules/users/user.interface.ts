@@ -1,4 +1,5 @@
 import { User, UserData } from './user.entity';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
 
 export type CreateUser = Omit<User, 'id'>;
 export type UpdateUser = Partial<User> & { id: number };
@@ -7,9 +8,7 @@ export type UserWithOptionalPassword<IncludePassword extends boolean> =
 
 export const USER_REPOSITORY = 'IUserRepository';
 
-export interface UserFilter extends Partial<UserData> {
-    OR?: UserFilter[];
-}
+export type UserFilter = EntityFilter<User>;
 
 export interface IUserRepository {
     findOneById(userId: number): Promise<User | null>;

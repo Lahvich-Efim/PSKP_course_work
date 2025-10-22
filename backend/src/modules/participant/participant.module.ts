@@ -5,6 +5,8 @@ import { ParticipantRepository } from './participant.repository';
 import { PARTICIPANT_REPOSITORY } from './participant.interface';
 import { PrismaModule } from '../prisma/prisma.module';
 import { UserModule } from '../users/user.module';
+import { CATALOG_REPOSITORY } from '../catalog/catalog.interface';
+import { CatalogRepository } from '../catalog/catalog.repository';
 
 @Module({
     imports: [PrismaModule, UserModule],
@@ -14,6 +16,10 @@ import { UserModule } from '../users/user.module';
         {
             provide: PARTICIPANT_REPOSITORY,
             useClass: ParticipantRepository,
+        },
+        {
+            provide: CATALOG_REPOSITORY,
+            useClass: CatalogRepository,
         },
     ],
     exports: [PARTICIPANT_REPOSITORY],

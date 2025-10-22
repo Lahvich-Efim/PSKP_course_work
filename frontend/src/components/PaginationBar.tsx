@@ -6,18 +6,19 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
+import CatalogsList from '@/components/CatalogsList.tsx';
 
 interface PaginationBarProps {
     page: number;
     totalPages: number;
-    setPage: (page: (prev: number) => number) => void;
+    onChangePage: (newPage: number) => void;
 }
 
-export function PaginationBar({
+const PaginationBar = ({
     page,
     totalPages,
-    setPage,
-}: PaginationBarProps) {
+    onChangePage,
+}: PaginationBarProps) => {
     const renderPages = () => {
         const items = [];
 
@@ -35,7 +36,7 @@ export function PaginationBar({
                         <PaginationLink
                             href="#"
                             isActive={isCurrent}
-                            onClick={() => setPage((index) => index)}
+                            onClick={() => onChangePage(index)}
                         >
                             {pageNum}
                         </PaginationLink>
@@ -65,8 +66,8 @@ export function PaginationBar({
                 <PaginationItem>
                     <PaginationPrevious
                         href="#"
-                        onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                        isActive={page !== 0}
+                        onClick={() => onChangePage(Math.max(page - 1, 0))}
+                        isActive={page > 0}
                     />
                 </PaginationItem>
 
@@ -75,11 +76,15 @@ export function PaginationBar({
                 <PaginationItem>
                     <PaginationNext
                         href="#"
-                        onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                        isActive={page !== totalPages - 1}
+                        onClick={() =>
+                            onChangePage(Math.min(page + 1, totalPages - 1))
+                        }
+                        isActive={page < totalPages - 1}
                     />
                 </PaginationItem>
             </PaginationContent>
         </Pagination>
     );
-}
+};
+
+export default PaginationBar;

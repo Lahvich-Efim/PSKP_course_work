@@ -7,6 +7,7 @@ import {
     UpdateSupply,
 } from './supply.interface';
 import { Supply } from './supply.entity';
+import { ProductionPlanDetailFilter } from '../production_plan_detail/production-plan-detail.interface';
 
 @Injectable()
 export class SupplyRepository implements ISupplyRepository {
@@ -75,5 +76,10 @@ export class SupplyRepository implements ISupplyRepository {
 
     async count(where?: SupplyFilter): Promise<number> {
         return this.prisma.supply.count({ where });
+    }
+
+    async deleteMany(where?: SupplyFilter): Promise<number> {
+        const result = await this.prisma.supply.deleteMany({ where });
+        return result.count;
     }
 }

@@ -60,49 +60,82 @@ export class ProductionPlanService {
         user: UserData,
         offset: number = 0,
         limit: number = 0,
-    ): Promise<ProductionPlanData> {
+    ): Promise<ProductionPlanData | null> {
         const plan =
             await this.productionPlanRepository.getLastProductionPlan();
-        if (!plan)
-            throw new ProductionPlanException(
-                'План производства не был создан',
-            );
+        if (!plan) return null;
 
-        const allCatalogs = await this.catalogRepository.findMany({
+        if (limit === 0) {
+            return {
+                id: plan.id,
+                period: plan.period,
+                status: plan.status,
+                catalogs: [],
+                count: 0,
+            };
+        }
+
+        const allCatalogsFull = await this.catalogRepository.findMany({
             plan_id: plan.id,
-            product:
-                user.role !== 'COORDINATOR'
-                    ? {
-                          participant_id: user.id,
-                      }
-                    : {},
         });
 
-        const products = await this.productRepository.findMany({});
+        const products = await this.productRepository.findMany({
+            catalogs: {
+                some: {
+                    plan_id: plan.id,
+                },
+            },
+        });
+        const prodMap = new Map<number, Product>(
+            products.map((p) => [p.id, p]),
+        );
 
-        const total = allCatalogs.length;
-        const pageCatalogs =
-            limit > 0
-                ? allCatalogs.slice(offset * limit, offset * limit + limit)
-                : allCatalogs;
+        const userCatalogs =
+            user.role !== 'COORDINATOR'
+                ? allCatalogsFull.filter(
+                      (c) =>
+                          prodMap.get(c.product_id)?.participant_id === user.id,
+                  )
+                : allCatalogsFull;
 
+        const total = userCatalogs.length;
+        const pageCatalogs = userCatalogs.slice(offset, offset + limit);
         const ids = pageCatalogs.map((c) => c.id);
+
         const supplies = await this.supplyRepository.findMany({
             OR: [
                 ...ids.map((id) => ({ supplier_catalog_id: id })),
                 ...ids.map((id) => ({ consumer_catalog_id: id })),
             ],
         });
+
         const supplyIds = supplies.map((s) => s.id);
+
         const details = await this.detailRepository.findMany({
             OR: supplyIds.map((id) => ({ supply_id: id })),
         });
-        const participants = await this.participantRepository.findMany();
+
+        const participantIds = new Set<number>(
+            products.map((p) => p.participant_id),
+        );
+        const participants = await this.participantRepository.findMany({
+            OR: Array.from(participantIds).map((id) => ({ id })),
+        });
+
+        const peerIds = supplies.flatMap((s) => [
+            s.supplier_catalog_id,
+            s.consumer_catalog_id,
+        ]);
+
+        const visibleCatalogs =
+            user.role !== 'COORDINATOR'
+                ? allCatalogsFull.filter((c) => peerIds.includes(c.id))
+                : allCatalogsFull;
 
         return this.buildPlanData(
             plan,
             pageCatalogs,
-            allCatalogs,
+            visibleCatalogs,
             supplies,
             details,
             products,
@@ -115,8 +148,9 @@ export class ProductionPlanService {
         params: CreateProductionPlanDto,
         user: UserData,
     ): Promise<ProductionPlan> {
-        if (user.role !== 'COORDINATOR')
+        if (user.role !== 'COORDINATOR') {
             throw new AccessDeniedError('Не имеете право доступа к ресурсу');
+        }
 
         const lastPlan =
             await this.productionPlanRepository.getLastProductionPlan();
@@ -126,81 +160,42 @@ export class ProductionPlanService {
             status: 'OPEN',
         });
 
-        if (!lastPlan) {
-            const products = await this.productRepository.findMany({});
-            const newProductMapping: Record<number, number> = {};
+        if (lastPlan) {
+            await this.detailRepository.deleteMany({ plan_id: lastPlan.id });
 
-            for (const product of products) {
-                const duplicatedProduct = await this.productRepository.create({
-                    name: product.name,
-                    unit: product.unit,
-                    participant_id: product.participant_id,
-                });
-                newProductMapping[product.id] = duplicatedProduct.id;
-            }
-
-            const newCatalogs = products.map((product) => ({
-                plan_id: newPlan.id,
-                product_id: newProductMapping[product.id],
-                desired_volume: 0,
-            }));
-            await this.catalogRepository.createMany(newCatalogs);
-        } else if (lastPlan.status === 'FINALIZED') {
             const lastCatalogs = await this.catalogRepository.findMany({
                 plan_id: lastPlan.id,
             });
-
-            const productIdsInLastPlan = Array.from(
-                new Set(lastCatalogs.map((c) => c.product_id)),
-            );
-            const orFilterProductsInLastPlan = productIdsInLastPlan.map(
-                (id) => ({ id }),
-            );
-            const productsToDuplicate =
-                productIdsInLastPlan.length > 0
-                    ? await this.productRepository.findMany({
-                          OR: orFilterProductsInLastPlan,
-                      })
-                    : [];
-
-            const productIdMapping: Record<number, number> = {};
-            for (const product of productsToDuplicate) {
-                const duplicatedProduct = await this.productRepository.create({
-                    name: product.name,
-                    unit: product.unit,
-                    participant_id: product.participant_id,
-                });
-                productIdMapping[product.id] = duplicatedProduct.id;
-            }
-
-            const catalogIdMapping: Record<number, number> = {};
-            for (const catalog of lastCatalogs) {
-                const newCatalog = await this.catalogRepository.create({
-                    product_id: productIdMapping[catalog.product_id],
-                    desired_volume: catalog.desired_volume,
-                    plan_id: newPlan.id,
-                });
-                catalogIdMapping[catalog.id] = newCatalog.id;
-            }
-
-            const supplies = await this.supplyRepository.findMany({
-                supplier_catalog: { plan_id: lastPlan.id },
-                consumer_catalog: { plan_id: lastPlan.id },
+            const lastSupplies = await this.supplyRepository.findMany({
+                AND: [
+                    { supplier_catalog: { is: { plan_id: lastPlan.id } } },
+                    { consumer_catalog: { is: { plan_id: lastPlan.id } } },
+                ],
             });
 
-            if (supplies.length) {
-                const newSupplies = supplies.map((supply) => ({
-                    cost_factor: supply.cost_factor,
-                    consumer_catalog_id:
-                        catalogIdMapping[supply.consumer_catalog_id],
-                    supplier_catalog_id:
-                        catalogIdMapping[supply.supplier_catalog_id],
-                }));
-                await this.supplyRepository.createMany(newSupplies);
+            const catalogIdMapping: Record<number, number> = {};
+            for (const oldCat of lastCatalogs) {
+                const newCat = await this.catalogRepository.create({
+                    plan_id: newPlan.id,
+                    product_id: oldCat.product_id,
+                    desired_volume: oldCat.desired_volume,
+                });
+                catalogIdMapping[oldCat.id] = newCat.id;
             }
-        }
+            const newSuppliesData = lastSupplies.map((s) => ({
+                cost_factor: s.cost_factor,
+                supplier_catalog_id: catalogIdMapping[s.supplier_catalog_id],
+                consumer_catalog_id: catalogIdMapping[s.consumer_catalog_id],
+            }));
+            await this.supplyRepository.createMany(newSuppliesData);
 
-        if (lastPlan) {
+            await this.supplyRepository.deleteMany({
+                OR: lastSupplies.map((s) => ({ id: s.id })),
+            });
+            await this.catalogRepository.deleteMany({
+                OR: lastCatalogs.map((c) => ({ id: c.id })),
+            });
+
             await this.productionPlanRepository.update({
                 id: lastPlan.id,
                 status: 'ARCHIVED',
@@ -225,18 +220,24 @@ export class ProductionPlanService {
         const detailMap = new Map(
             details.map((d) => [d.supply_id, d.final_amount]),
         );
+        const allCatalogsMap = new Map(allCatalogs.map((c) => [c.id, c]));
+
+        const suppliesByCatalog = new Map<number, Supply[]>();
+        for (const s of supplies) {
+            if (!suppliesByCatalog.has(s.supplier_catalog_id))
+                suppliesByCatalog.set(s.supplier_catalog_id, []);
+            if (!suppliesByCatalog.has(s.consumer_catalog_id))
+                suppliesByCatalog.set(s.consumer_catalog_id, []);
+            suppliesByCatalog.get(s.supplier_catalog_id)!.push(s);
+            suppliesByCatalog.get(s.consumer_catalog_id)!.push(s);
+        }
 
         const catalogs = pageCatalogs.map((cat) => {
             const prod = prodMap.get(cat.product_id)!;
             const owner = partMap.get(prod.participant_id)!;
 
-            const suppliesList = supplies
-                .filter(
-                    (s) =>
-                        s.supplier_catalog_id === cat.id ||
-                        s.consumer_catalog_id === cat.id,
-                )
-                .map((s) => {
+            const suppliesList =
+                suppliesByCatalog.get(cat.id)?.map((s) => {
                     const outgoing = s.supplier_catalog_id === cat.id;
                     const direction: 'outgoing' | 'incoming' = outgoing
                         ? 'outgoing'
@@ -244,7 +245,7 @@ export class ProductionPlanService {
                     const peerId = outgoing
                         ? s.consumer_catalog_id
                         : s.supplier_catalog_id;
-                    const peerCat = allCatalogs.find((a) => a.id === peerId)!;
+                    const peerCat = allCatalogsMap.get(peerId)!;
                     const peerProd = prodMap.get(peerCat.product_id)!;
                     return {
                         id: s.id,
@@ -253,16 +254,22 @@ export class ProductionPlanService {
                         direction,
                         peer_catalog: {
                             id: peerCat.id,
-                            product: peerProd,
-                            participant: partMap.get(peerProd.participant_id)!,
+                            product: {
+                                ...peerProd,
+                                participant_name: partMap.get(
+                                    peerProd.participant_id,
+                                )!,
+                            },
                         },
                     };
-                });
+                }) ?? [];
 
             return {
                 id: cat.id,
-                product: prod,
-                participant: owner,
+                product: {
+                    ...prod,
+                    participant_name: owner,
+                },
                 desired_volume: cat.desired_volume,
                 supplies: suppliesList,
             };
@@ -279,60 +286,67 @@ export class ProductionPlanService {
 
     async calculateProductionPlan(user: UserData) {
         if (user.role !== 'COORDINATOR')
-            throw new AccessDeniedError('Нужна роль COORDINATOR');
+            throw new AccessDeniedError(
+                'Только координатор может сделать расчет',
+            );
 
-        // 1. Получаем текущий план
         const plan =
             await this.productionPlanRepository.getLastProductionPlan();
         if (!plan) throw new ProductionPlanException('План не создан');
         if (plan.status !== 'OPEN')
             throw new ProductionPlanException('План уже рассчитан');
 
-        // 2. Получаем все каталоги текущего плана
         const catalogs = await this.catalogRepository.findMany({
             plan_id: plan.id,
         });
         if (catalogs.length === 0)
             throw new ProductionPlanException('Нет каталогов');
 
-        // 3. Составляем индекс
+        // Индекс каталога -> позиция
         const idx = new Map<number, number>();
         catalogs.forEach((c, i) => idx.set(c.id, i));
 
-        // 4. Вектор Y и матрица A
+        // Вектор Y
         const Y: Decimal[] = catalogs.map((c) => new Decimal(c.desired_volume));
-        const A: Decimal[][] = Array.from({ length: catalogs.length }, () =>
-            Array.from({ length: catalogs.length }, () => new Decimal(0)),
+        const n = catalogs.length;
+
+        // Матрица A (n x n), заполнена нулями
+        const A: Decimal[][] = Array.from({ length: n }, () =>
+            Array.from({ length: n }, () => new Decimal(0)),
         );
 
-        // 5. Загружаем все поставки, где участвуют наши каталоги
-        const orFilterSupplies = catalogs.flatMap((c) => [
-            { supplier_catalog_id: c.id },
-            { consumer_catalog_id: c.id },
-        ]);
+        // Подгружаем поставки, связанные с этими каталогами
         const supplies = await this.supplyRepository.findMany({
-            OR: orFilterSupplies,
+            OR: catalogs.flatMap((c) => [
+                { supplier_catalog_id: c.id },
+                { consumer_catalog_id: c.id },
+            ]),
         });
 
-        // 6. Заполняем A[i][j] = cost_factor
+        // Заполняем A и создаём map для быстрого поиска поставки по паре (supplier,consumer)
+        const supplyPairMap = new Map<string, Supply>();
         for (const s of supplies) {
-            const i = idx.get(s.supplier_catalog_id)!;
-            const j = idx.get(s.consumer_catalog_id)!;
+            const i = idx.get(s.supplier_catalog_id);
+            const j = idx.get(s.consumer_catalog_id);
+            if (i === undefined || j === undefined) continue;
             A[i][j] = new Decimal(s.cost_factor);
+            supplyPairMap.set(
+                `${s.supplier_catalog_id}:${s.consumer_catalog_id}`,
+                s,
+            );
         }
 
-        // 7. Строим I−A
+        // I - A
         const IminusA = A.map((row, i) =>
             row.map((aij, j) =>
                 i === j ? new Decimal(1).minus(aij) : aij.neg(),
             ),
         );
 
-        // 8. Инверсия через Gauss-Jordan Decimal
         const inv = this.invert(IminusA);
         if (!inv) throw new UnknownError('(I–A) необратима');
 
-        // 9. X = inv * Y
+        // X = inv * Y
         const X = inv.map((row) =>
             row.reduce(
                 (sum, aij, k) => sum.plus(aij.times(Y[k])),
@@ -340,41 +354,33 @@ export class ProductionPlanService {
             ),
         );
 
-        // 10. U = A * X и сохранение деталей
-        for (let i = 0; i < catalogs.length; i++) {
-            for (let j = 0; j < catalogs.length; j++) {
+        const toCreate: Array<{
+            plan_id: number;
+            supply_id: number;
+            final_amount: number;
+        }> = [];
+
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) {
                 const amount = A[i][j].times(X[j]);
                 if (amount.gt(0)) {
-                    const supplierId = catalogs[i].id;
-                    const consumerId = catalogs[j].id;
-                    const sup = supplies.find(
-                        (s) =>
-                            s.supplier_catalog_id === supplierId &&
-                            s.consumer_catalog_id === consumerId,
+                    const supplierCatalogId = catalogs[i].id;
+                    const consumerCatalogId = catalogs[j].id;
+                    const sup = supplyPairMap.get(
+                        `${supplierCatalogId}:${consumerCatalogId}`,
                     );
-                    if (sup) {
-                        await this.detailRepository
-                            .create({
-                                plan_id: plan.id,
-                                supply_id: sup.id,
-                                final_amount: amount.toNumber(),
-                            })
-                            .catch(async () => {
-                                const existing =
-                                    await this.detailRepository.findOne({
-                                        supply_id: sup.id,
-                                    });
-                                if (existing) {
-                                    await this.detailRepository.update({
-                                        id: existing.id,
-                                        final_amount: amount.toNumber(),
-                                    });
-                                }
-                            });
-                    }
+                    if (!sup) continue;
+
+                    toCreate.push({
+                        plan_id: plan.id,
+                        supply_id: sup.id,
+                        final_amount: amount.toNumber(),
+                    });
                 }
             }
         }
+
+        await Promise.all(toCreate.map((c) => this.detailRepository.create(c)));
 
         return this.productionPlanRepository.update({
             id: plan.id,
@@ -382,8 +388,10 @@ export class ProductionPlanService {
         });
     }
 
+    // Устойчивый Gauss-Jordan с пивотированием строк
     private invert(mat: Decimal[][]): Decimal[][] | null {
         const n = mat.length;
+        // создаём расширенную матрицу [mat | I]
         const M = mat.map((r, i) => [
             ...r.map((v) => v),
             ...Array.from(
@@ -393,16 +401,40 @@ export class ProductionPlanService {
         ]);
 
         for (let i = 0; i < n; i++) {
+            // Пивот: если M[i][i] == 0, ищем строку ниже для swap
+            if (M[i][i].isZero()) {
+                let swapRow = -1;
+                for (let k = i + 1; k < n; k++) {
+                    if (!M[k][i].isZero()) {
+                        swapRow = k;
+                        break;
+                    }
+                }
+                if (swapRow === -1) {
+                    // матрица сингулярна
+                    return null;
+                }
+                const tmp = M[i];
+                M[i] = M[swapRow];
+                M[swapRow] = tmp;
+            }
+
+            // Нормализуем строку i: делим на pivot
             const pivot = M[i][i];
-            if (pivot.isZero()) return null;
             for (let j = 0; j < 2 * n; j++) M[i][j] = M[i][j].div(pivot);
+
+            // Обнуляем остальные строковые элементы в столбце i
             for (let k = 0; k < n; k++) {
                 if (k === i) continue;
                 const factor = M[k][i];
-                for (let j = 0; j < 2 * n; j++)
+                if (factor.isZero()) continue;
+                for (let j = 0; j < 2 * n; j++) {
                     M[k][j] = M[k][j].minus(M[i][j].times(factor));
+                }
             }
         }
+
+        // возвращаем правую половину
         return M.map((r) => r.slice(n));
     }
 }

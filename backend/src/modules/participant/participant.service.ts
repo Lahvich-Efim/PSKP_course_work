@@ -9,11 +9,16 @@ import {
 import { Participant, ParticipantData } from './participant.entity';
 import {
     AccessDeniedError,
+    EntityAlreadyExistError,
     NotFoundError,
 } from '../../shared/exceptions/exceptions';
-import { PaginatedResult } from '../../shared/pagination.interface';
+import { PaginatedResult } from '../../shared/interfaces/pagination.interface';
 import { IUserRepository, USER_REPOSITORY } from '../users/user.interface';
 import { UserData } from 'src/modules/users/user.entity';
+import {
+    CATALOG_REPOSITORY,
+    ICatalogRepository,
+} from '../catalog/catalog.interface';
 
 @Injectable()
 export class ParticipantService {
@@ -22,6 +27,8 @@ export class ParticipantService {
         private readonly participantRepo: IParticipantRepository,
         @Inject(USER_REPOSITORY)
         private readonly userRepo: IUserRepository,
+        @Inject(CATALOG_REPOSITORY)
+        private readonly catalogRepo: ICatalogRepository,
     ) {}
 
     private authorizeAccess(user: UserData, targetId: number) {
@@ -34,10 +41,7 @@ export class ParticipantService {
 
     private async toParticipantData(p: Participant): Promise<ParticipantData> {
         const user = await this.userRepo.findOneById(p.id);
-        if (!user)
-            throw new NotFoundError(
-                `Пользователь для участника ${p.id} не найден`,
-            );
+        if (!user) throw new NotFoundError(`Данный пользователь не существует`);
         return {
             id: p.id,
             name: p.name,
@@ -55,8 +59,7 @@ export class ParticipantService {
     ): Promise<ParticipantData> {
         this.authorizeAccess(user, participantId);
         const p = await this.participantRepo.findOneById(participantId);
-        if (!p)
-            throw new NotFoundError(`Участник с id ${participantId} не найден`);
+        if (!p) throw new NotFoundError(`Данный участник не существует`);
         return this.toParticipantData(p);
     }
 
@@ -80,7 +83,7 @@ export class ParticipantService {
         user: UserData,
     ): Promise<Participant> {
         if (user.role !== 'COORDINATOR') {
-            throw new AccessDeniedError('Нет прав для создания участника');
+            throw new AccessDeniedError('Нет прав для регистрации участников');
         }
         return this.participantRepo.create(dto);
     }
@@ -91,8 +94,7 @@ export class ParticipantService {
     ): Promise<Participant> {
         this.authorizeAccess(user, dto.id);
         const existing = await this.participantRepo.findOneById(dto.id);
-        if (!existing)
-            throw new NotFoundError(`Участник с id ${dto.id} не найден`);
+        if (!existing) throw new NotFoundError(`Данный участник не существует`);
         return this.participantRepo.update(dto);
     }
 
@@ -102,10 +104,17 @@ export class ParticipantService {
     ): Promise<Participant> {
         this.authorizeAccess(user, participantId);
         const existing = await this.participantRepo.findOneById(participantId);
-        if (!existing)
-            throw new NotFoundError(`Участник с id ${participantId} не найден`);
-        const participant = this.participantRepo.delete(participantId);
-        await this.userRepo.delete(user.id);
+        if (!existing) throw new NotFoundError(`Данный участник не существует`);
+        const existing_catalog = await this.catalogRepo.count({
+            product: { is: { participant_id: participantId } },
+        });
+        if (existing_catalog > 0)
+            throw new EntityAlreadyExistError(
+                'Удаление участника с выставленным каталогов невозможна!',
+            );
+
+        const participant = await this.participantRepo.delete(participantId);
+        await this.userRepo.delete(participantId);
         return participant;
     }
 }

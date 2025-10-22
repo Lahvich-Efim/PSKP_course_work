@@ -19,14 +19,36 @@ import { CatalogResponseDto } from './dto/catalog-response.dto';
 import { CreateCatalogDto } from './dto/create-catalog.dto';
 import { UpdateCatalogDto } from './dto/update-catalog.dto';
 import { Catalog } from './catalog.entity';
+import {
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiCookieAuth,
+    ApiCreatedResponse,
+    ApiForbiddenResponse,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiTags,
+    ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 const PaginatedCatalogDto = PaginatedResponseDto(CatalogResponseDto);
 
+@ApiBearerAuth()
+@ApiCookieAuth()
+@ApiTags('Catalogs')
 @Controller('catalogs')
 export class CatalogController {
     constructor(private readonly catalogService: CatalogService) {}
 
     @Get()
+    @ApiOperation({ summary: 'Get all actual catalogs' })
+    @ApiOkResponse({
+        description: 'Successfully retrieved actual catalogs',
+        type: PaginatedCatalogDto,
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async getAllActualityCatalogs(
         @Query() params: PaginationDto,
         @CurrentUser() user: UserData,
@@ -36,6 +58,14 @@ export class CatalogController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get an actual catalog by ID' })
+    @ApiOkResponse({
+        description: 'Successfully retrieved actual catalog',
+        type: CatalogResponseDto,
+    })
+    @ApiNotFoundResponse({ description: 'Catalog not found' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async getActualityCatalog(
         @Param('id') id: number,
         @CurrentUser() user: UserData,
@@ -44,6 +74,14 @@ export class CatalogController {
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a new catalog' })
+    @ApiCreatedResponse({
+        description: 'The catalog has been successfully created.',
+        type: CatalogResponseDto,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid input data' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async createCatalog(
         @Body() dto: CreateCatalogDto,
         @CurrentUser() user: UserData,
@@ -52,6 +90,15 @@ export class CatalogController {
     }
 
     @Patch(':id')
+    @ApiOperation({ summary: 'Update an existing catalog' })
+    @ApiOkResponse({
+        description: 'The catalog has been successfully updated.',
+        type: CatalogResponseDto,
+    })
+    @ApiNotFoundResponse({ description: 'Catalog not found' })
+    @ApiBadRequestResponse({ description: 'Invalid input data' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async updateCatalog(
         @Param('id') id: number,
         @Body() dto: UpdateCatalogDto,
@@ -61,6 +108,13 @@ export class CatalogController {
     }
 
     @Delete(':id')
+    @ApiOperation({ summary: 'Delete a catalog' })
+    @ApiOkResponse({
+        description: 'The catalog has been successfully deleted.',
+    })
+    @ApiNotFoundResponse({ description: 'Catalog not found' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async deleteCatalog(
         @Param('id') id: number,
         @CurrentUser() user: UserData,

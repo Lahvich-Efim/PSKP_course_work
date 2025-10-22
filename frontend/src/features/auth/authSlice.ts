@@ -16,6 +16,7 @@ interface AuthState {
     accessToken: string | null;
     loading: boolean;
     error: string | null;
+    id: number | null;
 }
 
 const initialState: AuthState = {
@@ -26,6 +27,7 @@ const initialState: AuthState = {
     loading: false,
     accessToken: null,
     error: null,
+    id: null,
 };
 
 export const refreshToken = createAsyncThunk(
@@ -36,6 +38,7 @@ export const refreshToken = createAsyncThunk(
             const { access_token } = response;
             const decode = jwtDecode<User>(access_token);
             return {
+                id: decode.id,
                 username: decode.username,
                 email: decode.email,
                 role: decode.role,
@@ -65,6 +68,7 @@ export const login = createAsyncThunk(
             const decode = jwtDecode<User>(access_token);
             return {
                 username,
+                id: decode.id,
                 email: decode.email,
                 role: decode.role,
                 accessToken: access_token,
@@ -107,12 +111,14 @@ const authSlice = createSlice({
                 (
                     state,
                     action: PayloadAction<{
+                        id: number;
                         username: string;
                         email: string;
                         role: string;
                         accessToken: string;
                     }>,
                 ) => {
+                    state.id = action.payload.id;
                     state.isAuth = true;
                     state.email = action.payload.email;
                     state.username = action.payload.username;
@@ -140,12 +146,14 @@ const authSlice = createSlice({
                 (
                     state,
                     action: PayloadAction<{
+                        id: number;
                         username: string;
                         email: string;
                         role: string;
                         accessToken: string;
                     }>,
                 ) => {
+                    state.id = action.payload.id;
                     state.isAuth = true;
                     state.username = action.payload.username;
                     state.email = action.payload.email;
@@ -171,6 +179,7 @@ const authSlice = createSlice({
                     state.username = null;
                     state.email = null;
                     state.role = null;
+                    state.id = null;
                 },
             )
             .addCase(logout.pending, (state) => {
@@ -185,6 +194,7 @@ const authSlice = createSlice({
                 state.username = null;
                 state.email = null;
                 state.role = null;
+                state.id = null;
             })
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error

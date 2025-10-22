@@ -7,15 +7,24 @@ import {
     Post,
     Res,
 } from '@nestjs/common';
-import { LoginDto, RegisterUserDto } from './auth.dto';
+import { LoginDto, RegisterUserDto } from './dto/auth.dto';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { Cookie } from '../../shared/decorators/cookies.decorator';
 import { Public } from '../../shared/decorators/public.decortor';
 import * as ms from 'ms';
+import {
+    ApiBadRequestResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiTags,
+} from '@nestjs/swagger';
+import { AuthTokensDto } from './dto/auth-token.dto';
+import { UserDto } from '../users/dto/user.dto';
 
 @Public()
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
     constructor(
@@ -24,11 +33,23 @@ export class AuthController {
     ) {}
 
     @Post('register')
+    @ApiOperation({ summary: 'Register a new user' })
+    @ApiOkResponse({
+        description: 'User registered successfully',
+        type: UserDto,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid registration data' })
     async register(@Body() registerDto: RegisterUserDto) {
         return await this.authService.register(registerDto);
     }
 
     @Post('login')
+    @ApiOperation({ summary: 'Login a user and set refresh token cookie' })
+    @ApiOkResponse({
+        description: 'User logged in successfully',
+        type: AuthTokensDto,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid login credentials' })
     async login(@Body() loginDto: LoginDto, @Res() res: Response) {
         const tokens = await this.authService.login(loginDto);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
@@ -51,6 +72,12 @@ export class AuthController {
     }
 
     @Post('refresh')
+    @ApiOperation({ summary: 'Refresh access token using refresh token' })
+    @ApiOkResponse({
+        description: 'Access token refreshed successfully',
+        type: AuthTokensDto,
+    })
+    @ApiBadRequestResponse({ description: 'Invalid refresh token' })
     async refreshToken(
         @Cookie('refreshtoken') refreshToken: string,
         @Res() res: Response,
@@ -76,6 +103,8 @@ export class AuthController {
     }
 
     @Get('logout')
+    @ApiOperation({ summary: 'Logout a user by clearing refresh token cookie' })
+    @ApiOkResponse({ description: 'User logged out successfully' })
     logout(@Cookie('refreshtoken') refreshToken: string, @Res() res: Response) {
         if (refreshToken) {
             res.cookie('refreshtoken', '', {

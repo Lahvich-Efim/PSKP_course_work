@@ -1,16 +1,18 @@
 import { Participant } from './participant.entity';
 
-import { UserFilter } from '../users/user.interface';
+import { User } from '../users/user.entity';
+import { EntityFilter } from '../../shared/interfaces/filter.interface';
 
 export type CreateParticipant = Participant;
 export type UpdateParticipant = Partial<Participant> & { id: number };
 
 export const PARTICIPANT_REPOSITORY = 'IParticipantRepository';
 
-export interface ParticipantFilter extends Partial<Participant> {
-    OR?: ParticipantFilter[];
-    user?: UserFilter;
+interface ParticipantRelations {
+    user: User;
 }
+
+export type ParticipantFilter = EntityFilter<Participant, ParticipantRelations>;
 
 export interface IParticipantRepository {
     findOneById(participantId: number): Promise<Participant | null>;

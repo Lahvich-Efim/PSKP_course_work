@@ -7,6 +7,7 @@ import {
     ICatalogRepository,
     UpdateCatalog,
 } from './catalog.interface';
+import { ProductionPlanDetailFilter } from '../production_plan_detail/production-plan-detail.interface';
 
 @Injectable()
 export class CatalogRepository implements ICatalogRepository {
@@ -90,5 +91,10 @@ export class CatalogRepository implements ICatalogRepository {
 
     count(where?: CatalogFilter): Promise<number> {
         return this.prisma.catalog.count({ where });
+    }
+
+    async deleteMany(where?: CatalogFilter): Promise<number> {
+        const result = await this.prisma.catalog.deleteMany({ where });
+        return result.count;
     }
 }

@@ -107,8 +107,8 @@ model ProductionPlanDetail {
   plan_id      Int
   supply_id    Int            @unique
   final_amount Float
-  plan         ProductionPlan @relation(fields: [plan_id], references: [id])
-  supply       Supply         @relation(fields: [supply_id], references: [id])
+  plan         ProductionPlan @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  supply       Supply         @relation(fields: [supply_id], references: [id], onDelete: Cascade)
 
   @@map("production_plan_details")
 }

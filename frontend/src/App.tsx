@@ -19,11 +19,7 @@ function App() {
     useEffect(() => {
         if (loading) return;
 
-        const normalizedRole = role?.toLowerCase();
-        const RoleRoutes =
-            normalizedRole && roleRouteMap[normalizedRole]
-                ? roleRouteMap[normalizedRole]
-                : [];
+        const RoleRoutes = [];
 
         if (loading || isAuth === null) {
             return;
@@ -31,29 +27,30 @@ function App() {
 
         const routes: RouteObject[] = [];
 
-        if (isAuth && normalizedRole) {
-            routes.push(
-                {
-                    path: `/${normalizedRole}/*`,
-                    element: <MainLayout />,
-                    children: RoleRoutes,
-                },
-                {
-                    path: '*',
-                    element: <Navigate to={`/${normalizedRole}`} />,
-                },
-            );
+        if (role) {
+            RoleRoutes.push(roleRouteMap[role]);
+            routes.push({
+                path: `/${role}/*`,
+                element: <MainLayout />,
+                children: RoleRoutes,
+            });
+        }
+
+        routes.push({
+            path: '/auth',
+            element: <AuthPage />,
+        });
+
+        if (isAuth && !loading) {
+            routes.push({
+                path: '*',
+                element: <Navigate to={`/${role}`} />,
+            });
         } else {
-            routes.push(
-                {
-                    path: '/auth',
-                    element: <AuthPage />,
-                },
-                {
-                    path: '*',
-                    element: <Navigate to={'/auth'} />,
-                },
-            );
+            routes.push({
+                path: '*',
+                element: <Navigate to={'/auth'} />,
+            });
         }
         setRoleRoutes(routes);
     }, [isAuth, loading, role]);

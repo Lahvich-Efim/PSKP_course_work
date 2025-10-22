@@ -8,8 +8,7 @@ export function useCreateProductionPlan() {
         mutationFn: (dto: createProductionPlan) =>
             new ProductionPlanService().createProductionPlan(dto),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['production-plan-meta'] });
-            qc.invalidateQueries({ queryKey: ['production-plan-catalogs'] });
+            qc.invalidateQueries({ queryKey: ['production-plan'] });
         },
     });
 }
@@ -19,8 +18,7 @@ export function useCalculateProductionPlan() {
     return useMutation({
         mutationFn: () => new ProductionPlanService().calculateProductionPlan(),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['production-plan-meta'] });
-            qc.invalidateQueries({ queryKey: ['production-plan-catalogs'] });
+            qc.invalidateQueries({ queryKey: ['production-plan'] });
         },
     });
 }

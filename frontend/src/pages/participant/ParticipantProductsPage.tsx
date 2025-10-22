@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
     Table,
     TableHeader,
@@ -19,12 +18,14 @@ import {
     useUpdateProduct,
     useDeleteProduct,
 } from '@/hooks/mutation/useProductsMutations';
-import { PaginationBar } from '@/components/PaginationBar.tsx';
+import PaginationBar from '@/components/PaginationBar.tsx';
 import type { Product } from '@/models/product';
+import { useFormErrors } from '@/hooks/useFormErrors.ts';
 
-export default function ParticipantProductsPage() {
+export default function ProductManagementPage() {
     const pageSize = 10;
     const [page, setPage] = useState(0);
+
     const { data: meta } = useProductionPlanMeta();
     const isFinalized = meta?.status === 'FINALIZED';
 
@@ -32,213 +33,184 @@ export default function ParticipantProductsPage() {
     const createProduct = useCreateProduct(() => refetch());
     const updateProduct = useUpdateProduct(() => refetch());
     const deleteProduct = useDeleteProduct(() => refetch());
+    const { fieldErrors, handleError, resetErrors } = useFormErrors(true);
 
-    const [newName, setNewName] = useState('');
-    const [newUnit, setNewUnit] = useState('');
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [editName, setEditName] = useState('');
-    const [editUnit, setEditUnit] = useState('');
+    // ---- состояния формы ----
+    const [editingProduct, setEditingProduct] = useState<null | Product>(null);
+    const [formVisible, setFormVisible] = useState(false);
+    const [name, setName] = useState('');
+    const [unit, setUnit] = useState('');
 
-    const startEdit = (p: Product) => {
-        setEditingId(p.id);
-        setEditName(p.name);
-        setEditUnit(p.unit);
-    };
-    const cancelEdit = () => setEditingId(null);
-
-    const saveNew = () => {
-        if (!newName || !newUnit) return;
-        createProduct.mutate({ name: newName, unit: newUnit });
-        setNewName('');
-        setNewUnit('');
+    const handleAddClick = () => {
+        setEditingProduct(null);
+        setName('');
+        setUnit('');
+        setFormVisible(true);
     };
 
-    const saveEdit = (id: number) => {
-        if (!editName || !editUnit) return;
-        updateProduct.mutate({ id, dto: { name: editName, unit: editUnit } });
-        setEditingId(null);
+    const handleEdit = (product: Product) => {
+        setEditingProduct(product);
+        setName(product.name);
+        setUnit(product.unit);
+        setFormVisible(true);
     };
 
-    const remove = (id: number) => {
+    const handleFormClose = () => {
+        setEditingProduct(null);
+        setName('');
+        setUnit('');
+        setFormVisible(false);
+    };
+
+    const handleSave = () => {
+        if (!name || !unit) return;
+        resetErrors();
+
+        if (editingProduct) {
+            updateProduct.mutate(
+                { id: editingProduct.id, dto: { name, unit } },
+                { onError: handleError },
+            );
+        } else {
+            createProduct.mutate({ name, unit }, { onError: handleError });
+        }
+
+        handleFormClose();
+    };
+
+    const handleDelete = (id: number) => {
         if (!confirm('Удалить продукт?')) return;
-        deleteProduct.mutate(id);
+        resetErrors();
+        deleteProduct.mutate(id, { onError: handleError });
     };
+
+    const renderFieldError = (field: string) =>
+        fieldErrors[field] ? (
+            <ul className="text-sm text-red-500 list-disc ml-4 break-words">
+                {fieldErrors[field]?.map((err, i) => <li key={i}>{err}</li>)}
+            </ul>
+        ) : null;
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold">Управление продуктами</h1>
-            {isFinalized && (
-                <Card className="bg-yellow-50 border-yellow-200">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-extrabold">Продукты</h1>
+                {(editingProduct || !formVisible) && !isFinalized && (
+                    <Button onClick={handleAddClick}>Добавить продукт</Button>
+                )}
+            </div>
+
+            {formVisible && (
+                <Card className="mb-6">
+                    <CardHeader>
+                        <CardTitle>
+                            {editingProduct
+                                ? 'Редактирование продукта'
+                                : 'Новый продукт'}
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent>
-                        <p className="text-yellow-800">
-                            План завершен — редактирование недоступно
-                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <Label>Название</Label>
+                                <Input
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    disabled={
+                                        isFinalized ||
+                                        createProduct.isPending ||
+                                        updateProduct.isPending
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Единица</Label>
+                                <Input
+                                    value={unit}
+                                    onChange={(e) => setUnit(e.target.value)}
+                                    disabled={
+                                        isFinalized ||
+                                        createProduct.isPending ||
+                                        updateProduct.isPending
+                                    }
+                                />
+                                {renderFieldError('unit')}
+                            </div>
+                            <div className="flex items-end space-x-2">
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={
+                                        isFinalized ||
+                                        createProduct.isPending ||
+                                        updateProduct.isPending
+                                    }
+                                >
+                                    {createProduct.isPending ||
+                                    updateProduct.isPending
+                                        ? 'Сохраняем...'
+                                        : 'Сохранить'}
+                                </Button>
+                                <Button
+                                    onClick={handleFormClose}
+                                    variant="outline"
+                                    disabled={
+                                        isFinalized ||
+                                        createProduct.isPending ||
+                                        updateProduct.isPending
+                                    }
+                                >
+                                    Отмена
+                                </Button>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             )}
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Создание продукта</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <Label>Название</Label>
-                            <Input
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
-                                disabled={
-                                    isFinalized || createProduct.isPending
-                                }
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Единица</Label>
-                            <Input
-                                value={newUnit}
-                                onChange={(e) => setNewUnit(e.target.value)}
-                                disabled={
-                                    isFinalized || createProduct.isPending
-                                }
-                            />
-                        </div>
-                        <div className="flex items-end">
-                            <Button
-                                onClick={saveNew}
-                                disabled={
-                                    isFinalized || createProduct.isPending
-                                }
-                            >
-                                {createProduct.isPending
-                                    ? 'Сохраняем...'
-                                    : 'Добавить'}
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            <Table className="table-fixed w-full">
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Название</TableHead>
+                        <TableHead>Единица</TableHead>
+                        <TableHead className="text-right">Действия</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {products.map((p) => (
+                        <TableRow key={p.id}>
+                            <TableCell>{p.name}</TableCell>
+                            <TableCell>{p.unit}</TableCell>
+                            <TableCell className="text-right space-x-2">
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleEdit(p)}
+                                    disabled={isFinalized}
+                                >
+                                    Ред.
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDelete(p.id)}
+                                    disabled={
+                                        isFinalized || deleteProduct.isPending
+                                    }
+                                >
+                                    Удалить
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Список продуктов</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Table className="table-fixed w-full">
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Название</TableHead>
-                                <TableHead>Единица</TableHead>
-                                <TableHead className="text-right">
-                                    Действия
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {products.map((p) => (
-                                <TableRow key={p.id}>
-                                    <TableCell>
-                                        {editingId === p.id ? (
-                                            <Input
-                                                value={editName}
-                                                onChange={(e) =>
-                                                    setEditName(e.target.value)
-                                                }
-                                                disabled={
-                                                    isFinalized ||
-                                                    updateProduct.isPending
-                                                }
-                                            />
-                                        ) : (
-                                            p.name
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        {editingId === p.id ? (
-                                            <Input
-                                                value={editUnit}
-                                                onChange={(e) =>
-                                                    setEditUnit(e.target.value)
-                                                }
-                                                disabled={
-                                                    isFinalized ||
-                                                    updateProduct.isPending
-                                                }
-                                            />
-                                        ) : (
-                                            p.unit
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        {editingId === p.id ? (
-                                            <>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        saveEdit(p.id)
-                                                    }
-                                                    disabled={
-                                                        isFinalized ||
-                                                        updateProduct.isPending
-                                                    }
-                                                >
-                                                    {updateProduct.isPending
-                                                        ? 'Сохр...'
-                                                        : 'Сохранить'}
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={cancelEdit}
-                                                    disabled={
-                                                        isFinalized ||
-                                                        updateProduct.isPending
-                                                    }
-                                                >
-                                                    Отмена
-                                                </Button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() => startEdit(p)}
-                                                    disabled={isFinalized}
-                                                >
-                                                    Ред.
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    onClick={() => remove(p.id)}
-                                                    disabled={
-                                                        isFinalized ||
-                                                        deleteProduct.isPending
-                                                    }
-                                                >
-                                                    Удалить
-                                                </Button>
-                                            </>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-
-                    <div className="mt-4 flex justify-center">
-                        <PaginationBar
-                            page={page}
-                            totalPages={Math.ceil(count / pageSize)}
-                            setPage={(fn) =>
-                                setPage((prev) =>
-                                    typeof fn === 'function' ? fn(prev) : fn,
-                                )
-                            }
-                        />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="mt-4 flex justify-center">
+                <PaginationBar
+                    page={page}
+                    totalPages={Math.ceil(count / pageSize)}
+                    onChangePage={setPage}
+                />
+            </div>
         </div>
     );
 }

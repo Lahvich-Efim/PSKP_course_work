@@ -18,15 +18,37 @@ import { CreateSupplyDto } from './dto/create-supply.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 import { SupplyResponseDto } from './dto/supply-response.dto';
 import { UserData } from '../users/user.entity';
+import {
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiCookieAuth,
+    ApiCreatedResponse,
+    ApiForbiddenResponse,
+    ApiNotFoundResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiTags,
+    ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 const PaginatedSupplyDto = PaginatedResponseDto(SupplyResponseDto);
 
+@ApiBearerAuth()
+@ApiCookieAuth()
+@ApiTags('Supplies')
 @Controller('supplies')
 export class SupplyController {
     constructor(private readonly supplyService: SupplyService) {}
 
     @Get()
-    async getAllActualitySupplies(
+    @ApiOperation({ summary: 'Get all actual supplies' })
+    @ApiOkResponse({
+        description: 'Successfully retrieved actual supplies',
+        type: PaginatedSupplyDto,
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
+    async getActualitySupplies(
         @Query() params: PaginationDto,
         @CurrentUser() user: UserData,
     ): Promise<InstanceType<typeof PaginatedSupplyDto>> {
@@ -35,7 +57,15 @@ export class SupplyController {
     }
 
     @Get(':id')
-    async getActualitySupplies(
+    @ApiOperation({ summary: 'Get an actual supply by ID' })
+    @ApiOkResponse({
+        description: 'Successfully retrieved actual supply',
+        type: SupplyResponseDto,
+    })
+    @ApiNotFoundResponse({ description: 'Supply not found' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
+    async getActualitySupply(
         @Param('id') id: number,
         @CurrentUser() user: UserData,
     ): Promise<SupplyResponseDto> {
@@ -43,6 +73,16 @@ export class SupplyController {
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a new supply' })
+    @ApiCreatedResponse({
+        description: 'The supply has been successfully created.',
+        type: SupplyResponseDto,
+    })
+    @ApiBadRequestResponse({
+        description: 'Invalid input data or supply already exists',
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async createSupply(
         @Body() dto: CreateSupplyDto,
         @CurrentUser() user: UserData,
@@ -51,6 +91,17 @@ export class SupplyController {
     }
 
     @Patch(':id')
+    @ApiOperation({ summary: 'Update an existing supply' })
+    @ApiOkResponse({
+        description: 'The supply has been successfully updated.',
+        type: SupplyResponseDto,
+    })
+    @ApiNotFoundResponse({ description: 'Supply not found' })
+    @ApiBadRequestResponse({
+        description: 'Invalid input data or supply conflict',
+    })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async updateSupply(
         @Param('id') id: number,
         @Body() dto: UpdateSupplyDto,
@@ -60,6 +111,14 @@ export class SupplyController {
     }
 
     @Delete(':id')
+    @ApiOperation({ summary: 'Delete a supply' })
+    @ApiOkResponse({
+        description: 'The supply has been successfully deleted.',
+        type: SupplyResponseDto,
+    })
+    @ApiNotFoundResponse({ description: 'Supply not found' })
+    @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+    @ApiForbiddenResponse({ description: 'Access Denied' })
     async deleteSupply(
         @Param('id') id: number,
         @CurrentUser() user: UserData,
