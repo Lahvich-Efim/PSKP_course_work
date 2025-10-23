@@ -8,7 +8,7 @@ import {
 } from 'src/core/interfaces/catalog.interface';
 import { IParticipantRepository } from 'src/core/interfaces/participant.interface';
 import { IProductRepository } from 'src/core/interfaces/product.interface';
-import { PlanContextService } from '../shared/services/plan-context.service';
+import { PlanContextService } from '../shared/plan-context.service';
 import { UserData } from '../core/entities/user.entity';
 import { ProductionPlan } from '@prisma/client';
 import {

@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { CoordinatorDto, CreateCoordinatorDto } from './dto/coordinator.dto';
-import { CurrentUser } from '../core/decorators/current_user.decorator';
+import { CurrentUser } from '../shared/decorators/current_user.decorator';
 import { CoordinatorService } from './coordinator.service';
 import { UserData } from '../core/entities/user.entity';
 import {

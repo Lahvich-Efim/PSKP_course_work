@@ -8,7 +8,7 @@ import {
     Logger,
 } from '@nestjs/common';
 import { BaseAPIError } from '../exceptions/exceptions';
-import { HTTP_ERROR_TYPE } from '../../core/decorators/http_error';
+import { HTTP_ERROR_TYPE } from '../decorators/http_error';
 import { Reflector } from '@nestjs/core';
 import { Response } from 'express';
 

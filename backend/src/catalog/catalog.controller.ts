@@ -29,8 +29,8 @@ import {
 import {
     PaginatedResponseDto,
     PaginationDto,
-} from '../core/dto/pagination.dto';
-import { CurrentUser } from '../core/decorators/current_user.decorator';
+} from '../shared/dto/pagination.dto';
+import { CurrentUser } from '../shared/decorators/current_user.decorator';
 
 const PaginatedCatalogDto = PaginatedResponseDto(CatalogResponseDto);
 

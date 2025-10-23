@@ -12,11 +12,11 @@ import { ProductService } from './product.service';
 import {
     PaginatedResponseDto,
     PaginationDto,
-} from '../core/dto/pagination.dto';
+} from '../shared/dto/pagination.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
-import { CurrentUser } from '../core/decorators/current_user.decorator';
+import { CurrentUser } from '../shared/decorators/current_user.decorator';
 import { UserData } from '../core/entities/user.entity';
 import {
     ApiBadRequestResponse,

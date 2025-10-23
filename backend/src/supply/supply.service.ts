@@ -8,7 +8,7 @@ import {
 } from '../shared/exceptions/exceptions';
 import { Supply, SupplyData } from '../core/entities/supply.entity';
 import { UserData } from '../core/entities/user.entity';
-import { PlanContextService } from '../shared/services/plan-context.service';
+import { PlanContextService } from '../shared/plan-context.service';
 import { ProductionPlan } from '../core/entities/production-plan.entity';
 import { SUPPLY_REPOSITORY } from '../core/interfaces/tokens';
 import {

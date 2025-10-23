@@ -20,8 +20,8 @@ import {
 } from '@nestjs/swagger';
 import { AuthTokensDto } from './dto/auth-token.dto';
 import { UserDto } from '../users/dto/user.dto';
-import { Cookie } from '../core/decorators/cookies.decorator';
-import { Public } from '../core/decorators/public.decortor';
+import { Cookie } from '../shared/decorators/cookies.decorator';
+import { Public } from '../shared/decorators/public.decortor';
 
 @Public()
 @ApiTags('Auth')

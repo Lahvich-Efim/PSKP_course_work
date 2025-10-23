@@ -9,7 +9,7 @@ import {
 } from '../shared/exceptions/exceptions';
 import { UserData } from '../core/entities/user.entity';
 import { UpdateProduct } from '../infrastructure/repositories/product.repository';
-import { PlanContextService } from '../shared/services/plan-context.service';
+import { PlanContextService } from '../shared/plan-context.service';
 import {
     CATALOG_REPOSITORY,
     PARTICIPANT_REPOSITORY,
