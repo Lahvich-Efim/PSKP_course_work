@@ -9,21 +9,27 @@ import {
     PRODUCTION_PLAN_DETAIL_REPOSITORY,
     PRODUCTION_PLAN_REPOSITORY,
     SUPPLY_REPOSITORY,
+    UNIT_OF_WORK,
     USER_REPOSITORY,
 } from '../core/interfaces/tokens';
-import { ProductRepository } from './repositories/product.repository';
-import { CatalogRepository } from './repositories/catalog.repository';
-import { SupplyRepository } from './repositories/supply.repository';
-import { UserRepository } from './repositories/user.repository';
-import { ParticipantRepository } from './repositories/participant.repository';
-import { CoordinatorRepository } from './repositories/coordinator.repository';
-import { ProductionPlanRepository } from './repositories/production-plan.repository';
-import { ProductionPlanDetailRepository } from './repositories/production-plan-detail.repository';
+import { ProductRepository } from './prisma/repositories/product.repository';
+import { CatalogRepository } from './prisma/repositories/catalog.repository';
+import { SupplyRepository } from './prisma/repositories/supply.repository';
+import { UserRepository } from './prisma/repositories/user.repository';
+import { ParticipantRepository } from './prisma/repositories/participant.repository';
+import { CoordinatorRepository } from './prisma/repositories/coordinator.repository';
+import { ProductionPlanRepository } from './prisma/repositories/production-plan.repository';
+import { ProductionPlanDetailRepository } from './prisma/repositories/production-plan-detail.repository';
+import { PrismaUnitOfWork } from './prisma/unit-of-work.service';
 
 @Module({
     imports: [PrismaModule],
     providers: [
         InfrastructureService,
+        {
+            provide: UNIT_OF_WORK,
+            useClass: PrismaUnitOfWork,
+        },
         {
             provide: USER_REPOSITORY,
             useClass: UserRepository,
@@ -67,6 +73,7 @@ import { ProductionPlanDetailRepository } from './repositories/production-plan-d
         SUPPLY_REPOSITORY,
         PRODUCTION_PLAN_REPOSITORY,
         PRODUCTION_PLAN_DETAIL_REPOSITORY,
+        UNIT_OF_WORK,
     ],
 })
 export class InfrastructureModule {}

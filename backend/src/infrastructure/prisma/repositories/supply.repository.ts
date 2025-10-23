@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
     CreateSupply,
     ISupplyRepository,
     SupplyFilter,
     UpdateSupply,
-} from '../../core/interfaces/supply.interface';
-import { Supply } from '../../core/entities/supply.entity';
+} from '../../../core/interfaces/supply.interface';
+import { Supply } from '../../../core/entities/supply.entity';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class SupplyRepository implements ISupplyRepository {
-    constructor(private readonly prisma: PrismaService) {}
-
+export class SupplyRepository
+    extends BaseRepository
+    implements ISupplyRepository
+{
     async create(supply: CreateSupply): Promise<Supply> {
         return await this.prisma.supply.create({
             data: supply,

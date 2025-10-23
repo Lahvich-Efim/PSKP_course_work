@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Catalog } from '../../core/entities/catalog.entity';
+import { Catalog } from '../../../core/entities/catalog.entity';
 import {
     CatalogFilter,
     CreateCatalog,
     ICatalogRepository,
     UpdateCatalog,
-} from '../../core/interfaces/catalog.interface';
+} from '../../../core/interfaces/catalog.interface';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class CatalogRepository implements ICatalogRepository {
-    constructor(private readonly prisma: PrismaService) {}
-
+export class CatalogRepository
+    extends BaseRepository
+    implements ICatalogRepository
+{
     async findOneById(
         catalogId: number,
         where?: CatalogFilter,

@@ -8,7 +8,7 @@ import {
     UnknownError,
 } from '../shared/exceptions/exceptions';
 import { UserData } from '../core/entities/user.entity';
-import { UpdateProduct } from '../infrastructure/repositories/product.repository';
+import { UpdateProduct } from '../infrastructure/prisma/repositories/product.repository';
 import { PlanContextService } from '../shared/plan-context.service';
 import {
     CATALOG_REPOSITORY,

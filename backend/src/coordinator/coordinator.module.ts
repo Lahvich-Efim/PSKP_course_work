@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CoordinatorService } from './coordinator.service';
 import { CoordinatorController } from './coordinator.controller';
-import { CoordinatorRepository } from '../infrastructure/repositories/coordinator.repository';
+import { CoordinatorRepository } from '../infrastructure/prisma/repositories/coordinator.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 import { COORDINATOR_REPOSITORY } from '../core/interfaces/tokens';
 

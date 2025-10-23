@@ -1,20 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
     CreateProductionPlan,
     IProductionPlanRepository,
     ProductionPlanFilter,
     UpdateProductionPlan,
-} from '../../core/interfaces/production-plan.interface';
+} from '../../../core/interfaces/production-plan.interface';
 import {
     ProductionPlan,
     StatusPlan,
-} from '../../core/entities/production-plan.entity';
+} from '../../../core/entities/production-plan.entity';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class ProductionPlanRepository implements IProductionPlanRepository {
-    constructor(private readonly prisma: PrismaService) {}
-
+export class ProductionPlanRepository
+    extends BaseRepository
+    implements IProductionPlanRepository
+{
     create(productionPlan: CreateProductionPlan): Promise<ProductionPlan> {
         return this.prisma.productionPlan.create({
             data: productionPlan,

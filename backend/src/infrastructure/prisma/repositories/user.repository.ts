@@ -1,16 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
     CreateUser,
     IUserRepository,
     UserFilter,
-} from '../../core/interfaces/user.interface';
-import { User } from '../../core/entities/user.entity';
+} from '../../../core/interfaces/user.interface';
+import { User } from '../../../core/entities/user.entity';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class UserRepository implements IUserRepository {
-    constructor(private prisma: PrismaService) {}
-
+export class UserRepository extends BaseRepository implements IUserRepository {
     async findOneById(userId: number): Promise<User | null> {
         return await this.prisma.user.findUnique({
             where: {

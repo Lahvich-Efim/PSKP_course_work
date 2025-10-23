@@ -1,19 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import {
     CreateProductionPlanDetail,
     IProductionPlanDetailRepository,
     ProductionPlanDetailFilter,
     UpdateProductionPlanDetail,
-} from '../../core/interfaces/production-plan-detail.interface';
-import { ProductionPlanDetail } from '../../core/entities/production-plan-detail.entity';
+} from '../../../core/interfaces/production-plan-detail.interface';
+import { ProductionPlanDetail } from '../../../core/entities/production-plan-detail.entity';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
 export class ProductionPlanDetailRepository
+    extends BaseRepository
     implements IProductionPlanDetailRepository
 {
-    constructor(private readonly prisma: PrismaService) {}
-
     async findOneById(
         productionPlanDetailId: number,
         where?: ProductionPlanDetailFilter,

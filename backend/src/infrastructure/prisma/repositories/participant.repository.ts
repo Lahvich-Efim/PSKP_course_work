@@ -1,17 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Participant } from '../../core/entities/participant.entity';
+import { Participant } from '../../../core/entities/participant.entity';
 import {
     IParticipantRepository,
     ParticipantFilter,
     CreateParticipant,
     UpdateParticipant,
-} from '../../core/interfaces/participant.interface';
+} from '../../../core/interfaces/participant.interface';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class ParticipantRepository implements IParticipantRepository {
-    constructor(private readonly prisma: PrismaService) {}
-
+export class ParticipantRepository
+    extends BaseRepository
+    implements IParticipantRepository
+{
     create(participant: CreateParticipant): Promise<Participant> {
         return this.prisma.participant.create({
             data: participant,

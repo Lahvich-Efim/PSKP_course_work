@@ -1,16 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
-import { Coordinator } from '../../core/entities/coordinator.entity';
+import { Coordinator } from '../../../core/entities/coordinator.entity';
 import {
     CreateCoordinator,
     ICoordinatorRepository,
     UpdateCoordinator,
-} from '../../core/interfaces/coordinator.interface';
+} from '../../../core/interfaces/coordinator.interface';
+import { BaseRepository } from './base.repository';
 
 @Injectable()
-export class CoordinatorRepository implements ICoordinatorRepository {
-    constructor(private readonly prisma: PrismaService) {}
-
+export class CoordinatorRepository
+    extends BaseRepository
+    implements ICoordinatorRepository
+{
     create(coordinator: CreateCoordinator): Promise<Coordinator> {
         return this.prisma.coordinator.create({
             data: coordinator,
