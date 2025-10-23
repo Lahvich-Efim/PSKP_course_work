@@ -1,4 +1,4 @@
-import { HttpError } from '../decorators/http_error';
+import { HttpError } from '../../core/decorators/http_error';
 import {
     BadRequestException,
     ConflictException,

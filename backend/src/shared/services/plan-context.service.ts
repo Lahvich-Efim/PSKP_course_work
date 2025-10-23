@@ -1,11 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
-import {
-    IProductionPlanRepository,
-    PRODUCTION_PLAN_REPOSITORY,
-} from '../../modules/production_plan/production-plan.interface';
-import { ProductionPlan } from '../../modules/production_plan/production-plan.entity';
+import { ProductionPlan } from '../../core/entities/production-plan.entity';
 import { ProductionPlanException } from '../exceptions/exceptions';
+import { PRODUCTION_PLAN_REPOSITORY } from '../../core/interfaces/tokens';
+import { IProductionPlanRepository } from '../../core/interfaces/production-plan.interface';
 
 @Injectable()
 export class PlanContextService {
