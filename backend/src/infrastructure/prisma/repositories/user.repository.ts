@@ -3,8 +3,8 @@ import {
     CreateUser,
     IUserRepository,
     UserFilter,
-} from '../../../core/interfaces/user.interface';
-import { User } from '../../../core/entities/user.entity';
+} from '../../../domain/repositories/user.interface';
+import { User } from '../../../domain/entities/user.entity';
 import { BaseRepository } from './base.repository';
 
 @Injectable()

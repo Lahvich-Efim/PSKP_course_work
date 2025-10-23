@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Participant } from '../../../core/entities/participant.entity';
+import { Participant } from '../../../domain/entities/participant.entity';
 import {
     IParticipantRepository,
     ParticipantFilter,
     CreateParticipant,
     UpdateParticipant,
-} from '../../../core/interfaces/participant.interface';
+} from '../../../domain/repositories/participant.interface';
 import { BaseRepository } from './base.repository';
 
 @Injectable()

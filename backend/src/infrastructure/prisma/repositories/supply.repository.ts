@@ -4,8 +4,8 @@ import {
     ISupplyRepository,
     SupplyFilter,
     UpdateSupply,
-} from '../../../core/interfaces/supply.interface';
-import { Supply } from '../../../core/entities/supply.entity';
+} from '../../../domain/repositories/supply.interface';
+import { Supply } from '../../../domain/entities/supply.entity';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
@@ -45,14 +45,10 @@ export class SupplyRepository
         });
     }
 
-    async findOneById(
-        supplyId: number,
-        where?: SupplyFilter,
-    ): Promise<Supply | null> {
+    async findOneById(supplyId: number): Promise<Supply | null> {
         return this.prisma.supply.findUnique({
             where: {
                 id: supplyId,
-                ...where,
             },
         });
     }

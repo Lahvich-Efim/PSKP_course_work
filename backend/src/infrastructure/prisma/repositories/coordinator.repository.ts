@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Coordinator } from '../../../core/entities/coordinator.entity';
+import { Coordinator } from '../../../domain/entities/coordinator.entity';
 import {
     CreateCoordinator,
     ICoordinatorRepository,
     UpdateCoordinator,
-} from '../../../core/interfaces/coordinator.interface';
+} from '../../../domain/repositories/coordinator.interface';
 import { BaseRepository } from './base.repository';
 
 @Injectable()

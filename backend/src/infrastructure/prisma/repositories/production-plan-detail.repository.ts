@@ -4,8 +4,8 @@ import {
     IProductionPlanDetailRepository,
     ProductionPlanDetailFilter,
     UpdateProductionPlanDetail,
-} from '../../../core/interfaces/production-plan-detail.interface';
-import { ProductionPlanDetail } from '../../../core/entities/production-plan-detail.entity';
+} from '../../../domain/repositories/production-plan-detail.interface';
+import { ProductionPlanDetail } from '../../../domain/entities/production-plan-detail.entity';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
@@ -15,12 +15,10 @@ export class ProductionPlanDetailRepository
 {
     async findOneById(
         productionPlanDetailId: number,
-        where?: ProductionPlanDetailFilter,
     ): Promise<ProductionPlanDetail | null> {
-        return this.prisma.productionPlanDetail.findFirst({
+        return this.prisma.productionPlanDetail.findUnique({
             where: {
                 id: productionPlanDetailId,
-                ...where,
             },
         });
     }

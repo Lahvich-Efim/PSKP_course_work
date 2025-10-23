@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { PlanContextService } from './plan-context.service';
+import { PlanContextService } from '../infrastructure/plan-context.service';
 import { InfrastructureModule } from '../infrastructure/infrastructure.module';
 
 @Module({

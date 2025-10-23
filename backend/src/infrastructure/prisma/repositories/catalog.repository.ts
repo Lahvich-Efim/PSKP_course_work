@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Catalog } from '../../../core/entities/catalog.entity';
+import { Catalog } from '../../../domain/entities/catalog.entity';
 import {
     CatalogFilter,
     CreateCatalog,
     ICatalogRepository,
     UpdateCatalog,
-} from '../../../core/interfaces/catalog.interface';
+} from '../../../domain/repositories/catalog.interface';
 import { BaseRepository } from './base.repository';
 
 @Injectable()
@@ -13,14 +13,10 @@ export class CatalogRepository
     extends BaseRepository
     implements ICatalogRepository
 {
-    async findOneById(
-        catalogId: number,
-        where?: CatalogFilter,
-    ): Promise<Catalog | null> {
+    async findOneById(catalogId: number): Promise<Catalog | null> {
         return this.prisma.catalog.findUnique({
             where: {
                 id: catalogId,
-                ...where,
             },
         });
     }

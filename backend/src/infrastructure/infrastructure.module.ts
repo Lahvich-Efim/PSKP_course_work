@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { InfrastructureService } from './infrastructure.service';
-import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaModule } from './prisma/prisma.module';
 import {
     CATALOG_REPOSITORY,
     COORDINATOR_REPOSITORY,
@@ -11,7 +11,7 @@ import {
     SUPPLY_REPOSITORY,
     UNIT_OF_WORK,
     USER_REPOSITORY,
-} from '../core/interfaces/tokens';
+} from '../domain/tokens';
 import { ProductRepository } from './prisma/repositories/product.repository';
 import { CatalogRepository } from './prisma/repositories/catalog.repository';
 import { SupplyRepository } from './prisma/repositories/supply.repository';

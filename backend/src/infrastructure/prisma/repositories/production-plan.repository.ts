@@ -4,11 +4,11 @@ import {
     IProductionPlanRepository,
     ProductionPlanFilter,
     UpdateProductionPlan,
-} from '../../../core/interfaces/production-plan.interface';
+} from '../../../domain/repositories/production-plan.interface';
 import {
     ProductionPlan,
     StatusPlan,
-} from '../../../core/entities/production-plan.entity';
+} from '../../../domain/entities/production-plan.entity';
 import { BaseRepository } from './base.repository';
 
 @Injectable()

@@ -3,8 +3,8 @@ import { SupplyRepository } from './repositories/supply.repository';
 import {
     ITransactionalRepositories,
     IUnitOfWork,
-} from '../../core/interfaces/unit-of-work.interface';
-import { PrismaService } from '../../prisma/prisma.service';
+} from '../../application/interfaces/unit-of-work.interface';
+import { PrismaService } from './prisma.service';
 import { Injectable } from '@nestjs/common';
 import { UserRepository } from './repositories/user.repository';
 import { ProductRepository } from './repositories/product.repository';

@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import {
     IProductRepository,
     ProductFilter,
-} from '../../../core/interfaces/product.interface';
-import { Product } from '../../../core/entities/product.entity';
-import { UserData } from '../../../core/entities/user.entity';
+} from '../../../domain/repositories/product.interface';
+import { Product } from '../../../domain/entities/product.entity';
+import { UserData } from '../../../domain/entities/user.entity';
 import { BaseRepository } from './base.repository';
 
 export type CreateProduct = Omit<Product, 'id'>;
