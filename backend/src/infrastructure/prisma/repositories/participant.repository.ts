@@ -7,12 +7,22 @@ import {
     UpdateParticipant,
 } from '../../../domain/repositories/participant.interface';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class ParticipantRepository
     extends BaseRepository
     implements IParticipantRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new ParticipantRepository(tx as unknown as PrismaService);
+    }
+
     create(participant: CreateParticipant): Promise<Participant> {
         return this.prisma.participant.create({
             data: participant,

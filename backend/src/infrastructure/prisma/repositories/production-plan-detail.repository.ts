@@ -7,12 +7,24 @@ import {
 } from '../../../domain/repositories/production-plan-detail.interface';
 import { ProductionPlanDetail } from '../../../domain/entities/production-plan-detail.entity';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class ProductionPlanDetailRepository
     extends BaseRepository
     implements IProductionPlanDetailRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new ProductionPlanDetailRepository(
+            tx as unknown as PrismaService,
+        );
+    }
+
     async findOneById(
         productionPlanDetailId: number,
     ): Promise<ProductionPlanDetail | null> {

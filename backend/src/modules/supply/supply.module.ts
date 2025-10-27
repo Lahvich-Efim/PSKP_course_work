@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 import { SupplyController } from './supply.controller';
 import { SupplyService } from './supply.service';
-import { SharedModule } from '../../shared/shared.module';
+import { CommonModule } from '../../common/common.module';
 import { InfrastructureModule } from '../../infrastructure/infrastructure.module';
 import { CatalogModule } from '../catalog/catalog.module';
 
 @Module({
-    imports: [InfrastructureModule, SharedModule, CatalogModule],
+    imports: [InfrastructureModule, CommonModule, CatalogModule],
     controllers: [SupplyController],
     providers: [SupplyService],
 })

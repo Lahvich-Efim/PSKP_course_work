@@ -20,8 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { AuthTokensDto } from './dto/auth-token.dto';
 import { UserDto } from '../users/dto/user.dto';
-import { Cookie } from '../../shared/decorators/cookies.decorator';
-import { Public } from '../../shared/decorators/public.decorator';
+import { Cookie } from '../../common/decorators/cookies.decorator';
+import { Public } from '../../common/decorators/public.decorator';
+import { StringValue } from 'ms';
 
 @Public()
 @ApiTags('Auth')
@@ -54,7 +55,7 @@ export class AuthController {
         const tokens = await this.authService.login(loginDto);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
         const refreshExp: number = ms(
-            this.configService.get('JWT_REFRESH_EXPIRE', '60d'),
+            this.configService.get<StringValue>('JWT_REFRESH_EXPIRE', '60d'),
         );
 
         if (!tokens) {
@@ -86,7 +87,7 @@ export class AuthController {
         const tokens = await this.authService.refreshTokens(refreshToken);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
         const refreshExp: number = ms(
-            this.configService.get('JWT_REFRESH_EXPIRE', '60d'),
+            this.configService.get<StringValue>('JWT_REFRESH_EXPIRE', '60d'),
         );
         const isProd = this.configService.get('NODE_ENV') === 'production';
         res.cookie('refreshtoken', tokens.refreshToken, {

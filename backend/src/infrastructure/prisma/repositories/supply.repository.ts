@@ -7,12 +7,22 @@ import {
 } from '../../../domain/repositories/supply.interface';
 import { Supply } from '../../../domain/entities/supply.entity';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class SupplyRepository
     extends BaseRepository
     implements ISupplyRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new SupplyRepository(tx as unknown as PrismaService);
+    }
+
     async create(supply: CreateSupply): Promise<Supply> {
         return await this.prisma.supply.create({
             data: supply,

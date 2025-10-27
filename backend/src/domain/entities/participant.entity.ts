@@ -4,7 +4,7 @@ export type Participant = {
     description?: string | null;
 };
 
-export interface ParticipantData {
+export type ParticipantData = {
     id: number;
     name: string;
     description?: string | null;
@@ -12,4 +12,4 @@ export interface ParticipantData {
         email: string;
         username: string;
     };
-}
+};

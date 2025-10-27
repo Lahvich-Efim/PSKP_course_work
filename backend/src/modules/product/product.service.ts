@@ -1,14 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Product, ProductData } from '../../domain/entities/product.entity';
-import { CreateProductDto } from './dto/create-product.dto';
 import {
     AccessDeniedError,
     EntityAlreadyExistError,
     NotFoundError,
     UnknownError,
-} from '../../shared/exceptions/exceptions';
+} from '../../common/exceptions/exceptions';
 import { UserData } from '../../domain/entities/user.entity';
-import { UpdateProduct } from '../../infrastructure/prisma/repositories/product.repository';
 import { PlanContextService } from '../../infrastructure/plan-context.service';
 import {
     CATALOG_REPOSITORY,
@@ -16,8 +14,10 @@ import {
     PRODUCT_REPOSITORY,
 } from '../../domain/tokens';
 import {
+    CreateProduct,
     IProductRepository,
     ProductFilter,
+    UpdateProduct,
 } from '../../domain/repositories/product.interface';
 import { ICatalogRepository } from '../../domain/repositories/catalog.interface';
 import { IParticipantRepository } from '../../domain/repositories/participant.interface';
@@ -77,9 +77,9 @@ export class ProductService {
 
     private buildFilter(user: UserData): ProductFilter {
         const filter: ProductFilter = {};
-        if (user.role === 'PARTICIPANT') {
+        if (user.role == 'PARTICIPANT') {
             filter.participant_id = user.id;
-        } else if (user.role !== 'COORDINATOR') {
+        } else if (user.role != 'COORDINATOR') {
             throw new AccessDeniedError('Нет доступа к продуктам');
         }
         return filter;
@@ -87,7 +87,6 @@ export class ProductService {
 
     async getProduct(productId: number, user: UserData): Promise<ProductData> {
         const where: ProductFilter = this.buildFilter(user);
-
         const product = await this.repository.findOne(where);
         if (!product) {
             throw new NotFoundError('Данный продукт не найден!');
@@ -99,19 +98,20 @@ export class ProductService {
         user: UserData,
         offset?: number,
         limit?: number,
+        filter?: ProductFilter,
     ): Promise<PaginatedResult<ProductData>> {
-        const where: ProductFilter = this.buildFilter(user);
-
+        const where: ProductFilter = { ...filter, ...this.buildFilter(user) };
         const [rawItems, count] = await Promise.all([
             this.repository.findMany(where, offset, limit),
             this.repository.count(where),
         ]);
+
         const items = await Promise.all(rawItems.map((p) => this.sanitize(p)));
         return { count, items };
     }
 
     async createProduct(
-        dto: CreateProductDto,
+        dto: CreateProduct,
         user: UserData,
     ): Promise<ProductData> {
         await this.planContext.ensurePlanIsOpen();
@@ -146,6 +146,9 @@ export class ProductService {
         if (
             await this.repository.isExists({
                 name: dto.name,
+                NOT: {
+                    id: dto.id,
+                },
             })
         )
             throw new EntityAlreadyExistError(

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Inject } from '@nestjs/common';
 import { ProductionPlan } from '../domain/entities/production-plan.entity';
-import { ProductionPlanException } from '../shared/exceptions/exceptions';
+import { ProductionPlanException } from '../common/exceptions/exceptions';
 import { PRODUCTION_PLAN_REPOSITORY } from '../domain/tokens';
 import { IProductionPlanRepository } from '../domain/repositories/production-plan.interface';
 

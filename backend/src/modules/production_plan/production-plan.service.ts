@@ -1,11 +1,13 @@
-import { Inject, Injectable, forwardRef } from '@nestjs/common';
-import { ProductionPlan } from '@prisma/client';
+import { Inject, Injectable } from '@nestjs/common';
 import {
     AccessDeniedError,
     ProductionPlanException,
     UnknownError,
-} from '../../shared/exceptions/exceptions';
-import { ProductionPlanData } from '../../domain/entities/production-plan.entity';
+} from '../../common/exceptions/exceptions';
+import {
+    ProductionPlan,
+    ProductionPlanData,
+} from '../../domain/entities/production-plan.entity';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { UserData } from '../../domain/entities/user.entity';
 import { Catalog } from '../../domain/entities/catalog.entity';
@@ -36,7 +38,7 @@ export class ProductionPlanService {
         private readonly productionPlanRepository: IProductionPlanRepository,
         @Inject(PRODUCT_REPOSITORY)
         private readonly productRepository: IProductRepository,
-        @Inject(forwardRef(() => CATALOG_REPOSITORY))
+        @Inject(CATALOG_REPOSITORY)
         private readonly catalogRepository: ICatalogRepository,
         @Inject(SUPPLY_REPOSITORY)
         private readonly supplyRepository: ISupplyRepository,
@@ -58,7 +60,8 @@ export class ProductionPlanService {
         if (limit === 0) {
             return {
                 id: plan.id,
-                period: plan.period,
+                period_start: plan.period_start,
+                period_end: plan.period_end,
                 status: plan.status,
                 catalogs: [],
                 count: 0,
@@ -146,7 +149,8 @@ export class ProductionPlanService {
             await this.productionPlanRepository.getLastProductionPlan();
 
         const newPlan = await this.productionPlanRepository.create({
-            period: params.period,
+            period_start: params.period_start,
+            period_end: params.period_end,
             status: 'OPEN',
         });
 
@@ -267,7 +271,8 @@ export class ProductionPlanService {
 
         return {
             id: plan.id,
-            period: plan.period,
+            period_start: plan.period_start,
+            period_end: plan.period_end,
             status: plan.status,
             catalogs,
             count: total,

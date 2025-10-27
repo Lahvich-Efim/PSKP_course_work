@@ -25,6 +25,8 @@ export class PaginationDto {
 }
 
 export function PaginatedResponseDto<T>(itemDto: ClassConstructor<T>) {
+    const dtoName = `${itemDto.name}PaginatedDto`;
+
     class PaginatedDto {
         @ApiProperty({ description: 'Total count of items', example: 100 })
         @Expose()
@@ -35,5 +37,6 @@ export function PaginatedResponseDto<T>(itemDto: ClassConstructor<T>) {
         @Type(() => itemDto)
         items!: T[];
     }
+    Object.defineProperty(PaginatedDto, 'name', { value: dtoName });
     return PaginatedDto;
 }

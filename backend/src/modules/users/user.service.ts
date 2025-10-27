@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import BcryptService from '../../shared/utils/bcrypt-wrapper';
+import BcryptService from '../../common/utils/bcrypt-wrapper';
 import { CreateUserDto, UserDto } from './dto/user.dto';
 import { User, UserData } from '../../domain/entities/user.entity';
 import {
@@ -20,7 +20,7 @@ export class UserService {
         withPassword?: IncludePassword,
     ): Promise<UserWithOptionalPassword<IncludePassword>> {
         const user: User | null = await this.repository.findOne(where);
-
+        console.log(user);
         if (!user) throw new NotFoundException(`User not found!`);
 
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment

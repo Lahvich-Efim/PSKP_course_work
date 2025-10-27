@@ -11,21 +11,28 @@ import { ProductionPlanDetailModule } from './modules/production_plan_detail/pro
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
-import { InfrastructureModule } from './infrastructure/infrastructure.module';
+import { ProductionModule } from './modules/production/production.module';
+import { ParticipantModule } from './modules/participant/participant.module';
+import { CoordinatorModule } from './modules/coordinator/coordinator.module';
+import { AgreementController } from './modules/agreement/agreement.controller';
+import { AgreementModule } from './modules/agreement/agreement.module';
 
 @Module({
     imports: [
         UserModule,
         ProductModule,
         ProductionPlanModule,
+        ParticipantModule,
+        CoordinatorModule,
         CatalogModule,
         AuthModule,
         SupplyModule,
         ConfigModule.forRoot({ isGlobal: true }),
         ProductionPlanDetailModule,
-        InfrastructureModule,
+        ProductionModule,
+        AgreementModule,
     ],
-    controllers: [AppController],
+    controllers: [AppController, AgreementController],
     providers: [
         AppService,
         {

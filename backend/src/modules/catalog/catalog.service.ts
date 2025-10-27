@@ -15,7 +15,7 @@ import {
     AccessDeniedError,
     EntityAlreadyExistError,
     NotFoundError,
-} from '../../shared/exceptions/exceptions';
+} from '../../common/exceptions/exceptions';
 import { PaginatedResult } from '../../domain/repositories/pagination.interface';
 import {
     CATALOG_REPOSITORY,

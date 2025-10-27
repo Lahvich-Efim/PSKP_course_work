@@ -11,12 +11,12 @@ import {
 import { ParticipantService } from './participant.service';
 import { CreateParticipantDto } from './dto/create-participant.dto';
 import { UpdateParticipantDto } from './dto/update-participant.dto';
-import { CurrentUser } from '../../shared/decorators/current_user.decorator';
+import { CurrentUser } from '../../common/decorators/current_user.decorator';
 import { Participant } from '../../domain/entities/participant.entity';
 import {
     PaginatedResponseDto,
     PaginationDto,
-} from '../../shared/dto/pagination.dto';
+} from '../../common/dto/pagination.dto';
 import { UserData } from '../../domain/entities/user.entity';
 import { ParticipantResponseDto } from './dto/participant-response.dto';
 import {

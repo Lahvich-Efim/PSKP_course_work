@@ -12,11 +12,11 @@ import { ProductService } from './product.service';
 import {
     PaginatedResponseDto,
     PaginationDto,
-} from '../../shared/dto/pagination.dto';
+} from '../../common/dto/pagination.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponseDto } from './dto/product-response.dto';
-import { CurrentUser } from '../../shared/decorators/current_user.decorator';
+import { CurrentUser } from '../../common/decorators/current_user.decorator';
 import { UserData } from '../../domain/entities/user.entity';
 import {
     ApiBadRequestResponse,
@@ -27,9 +27,12 @@ import {
     ApiNotFoundResponse,
     ApiOkResponse,
     ApiOperation,
+    ApiQuery,
     ApiTags,
     ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ProductFilterDto } from './dto/product-filter.dto';
+import { ParseJsonDtoPipe } from '../../common/pipe/parse_json.pipe';
 
 const PaginatedProductDto = PaginatedResponseDto(ProductResponseDto);
 
@@ -48,12 +51,24 @@ export class ProductController {
     })
     @ApiUnauthorizedResponse({ description: 'Unauthorized' })
     @ApiForbiddenResponse({ description: 'Access Denied' })
+    @ApiQuery({
+        name: 'filter',
+        required: false,
+        description:
+            'JSON stringified filter. Example: {"name":"Steel","participant_id":42}',
+        schema: {
+            type: 'string',
+            example: '{"name":"Steel","participant_id":42}',
+        },
+    })
     async getActualityProducts(
         @Query() params: PaginationDto,
         @CurrentUser() user: UserData,
+        @Query('filter', new ParseJsonDtoPipe(ProductFilterDto))
+        filterDto?: ProductFilterDto,
     ): Promise<InstanceType<typeof PaginatedProductDto>> {
         const { offset, limit } = params;
-        return this.productsService.getProducts(user, offset, limit);
+        return this.productsService.getProducts(user, offset, limit, filterDto);
     }
 
     @Get(':id')
@@ -85,7 +100,10 @@ export class ProductController {
         @Body() params: CreateProductDto,
         @CurrentUser() user: UserData,
     ): Promise<ProductResponseDto> {
-        return this.productsService.createProduct(params, user);
+        return this.productsService.createProduct(
+            { ...params, participant_id: user.id },
+            user,
+        );
     }
 
     @Patch(':id')

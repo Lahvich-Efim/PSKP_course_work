@@ -99,7 +99,14 @@ export class ProductionPlanResponseDto {
         example: '2023-01-01T00:00:00.000Z',
     })
     @Expose()
-    period: Date;
+    period_start: Date;
+
+    @ApiProperty({
+        description: 'Period of the production plan',
+        example: '2023-01-01T00:00:00.000Z',
+    })
+    @Expose()
+    period_end: Date;
 
     @ApiProperty({
         description: 'Status of the production plan',
@@ -117,4 +124,7 @@ export class ProductionPlanResponseDto {
     @Expose()
     @Type(() => CatalogInPlanDto)
     catalogs?: CatalogInPlanDto[];
+
+    @Expose()
+    count?: number;
 }

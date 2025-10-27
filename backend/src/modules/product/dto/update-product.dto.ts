@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateProductDto {
@@ -12,11 +12,10 @@ export class UpdateProductDto {
     name?: string;
 
     @ApiProperty({
-        description: 'Optional new unit of measurement for the product',
-        example: 'шт',
-        required: false,
+        description: 'ID of the production',
+        example: 1,
     })
-    @IsString()
     @IsOptional()
-    unit?: string;
+    @IsNumber()
+    production_id?: number;
 }

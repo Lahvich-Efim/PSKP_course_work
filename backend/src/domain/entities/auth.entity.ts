@@ -1,11 +1,11 @@
-export interface Tokens {
+export type Tokens = {
     accessToken: string;
     refreshToken: string;
-}
+};
 
-export interface JwtPayload {
+export type JwtPayload = {
     id: number;
     username: string;
     email: string;
     role: string;
-}
+};

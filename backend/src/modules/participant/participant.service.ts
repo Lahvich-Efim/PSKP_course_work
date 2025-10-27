@@ -7,7 +7,7 @@ import {
     AccessDeniedError,
     EntityAlreadyExistError,
     NotFoundError,
-} from '../../shared/exceptions/exceptions';
+} from '../../common/exceptions/exceptions';
 import { UserData } from 'src/domain/entities/user.entity';
 import {
     CATALOG_REPOSITORY,
@@ -76,6 +76,7 @@ export class ParticipantService {
             this.participantRepo.findMany(where, offset, limit),
             this.participantRepo.count(where),
         ]);
+        console.log(items);
         const data = await Promise.all(
             items.map((p) => this.toParticipantData(p)),
         );

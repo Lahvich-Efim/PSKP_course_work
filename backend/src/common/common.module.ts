@@ -7,4 +7,4 @@ import { InfrastructureModule } from '../infrastructure/infrastructure.module';
     providers: [PlanContextService],
     exports: [PlanContextService],
 })
-export class SharedModule {}
+export class CommonModule {}

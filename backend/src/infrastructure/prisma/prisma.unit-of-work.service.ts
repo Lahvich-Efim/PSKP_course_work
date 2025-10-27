@@ -13,6 +13,8 @@ import { ProductionPlanDetailRepository } from './repositories/production-plan-d
 import { CoordinatorRepository } from './repositories/coordinator.repository';
 import { ParticipantRepository } from './repositories/participant.repository';
 import { Prisma } from '@prisma/client';
+import { ProductionRepository } from './repositories/production.repository';
+import { AgreementRepository } from './repositories/agreement.repository';
 
 @Injectable()
 export class PrismaUnitOfWork implements IUnitOfWork {
@@ -24,17 +26,27 @@ export class PrismaUnitOfWork implements IUnitOfWork {
         return this.prisma.$transaction(
             async (prismaTx: Prisma.TransactionClient) => {
                 return fn({
-                    catalogRepository: new CatalogRepository(prismaTx),
-                    userRepository: new UserRepository(prismaTx),
-                    supplyRepository: new SupplyRepository(prismaTx),
-                    participantRepository: new ParticipantRepository(prismaTx),
-                    coordinatorRepository: new CoordinatorRepository(prismaTx),
-                    productRepository: new ProductRepository(prismaTx),
-                    productionPlanRepository: new ProductionPlanRepository(
-                        prismaTx,
-                    ),
+                    catalogRepository:
+                        CatalogRepository.withTransaction(prismaTx),
+                    userRepository: UserRepository.withTransaction(prismaTx),
+                    supplyRepository:
+                        SupplyRepository.withTransaction(prismaTx),
+                    participantRepository:
+                        ParticipantRepository.withTransaction(prismaTx),
+                    coordinatorRepository:
+                        CoordinatorRepository.withTransaction(prismaTx),
+                    productRepository:
+                        ProductRepository.withTransaction(prismaTx),
+                    productionPlanRepository:
+                        ProductionPlanRepository.withTransaction(prismaTx),
                     productionPlanDetailRepository:
-                        new ProductionPlanDetailRepository(prismaTx),
+                        ProductionPlanDetailRepository.withTransaction(
+                            prismaTx,
+                        ),
+                    productionRepository:
+                        ProductionRepository.withTransaction(prismaTx),
+                    agreementRepository:
+                        AgreementRepository.withTransaction(prismaTx),
                 });
             },
         );

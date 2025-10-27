@@ -6,9 +6,19 @@ import {
 } from '../../../domain/repositories/user.interface';
 import { User } from '../../../domain/entities/user.entity';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class UserRepository extends BaseRepository implements IUserRepository {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new UserRepository(tx as unknown as PrismaService);
+    }
+
     async findOneById(userId: number): Promise<User | null> {
         return await this.prisma.user.findUnique({
             where: {

@@ -10,12 +10,22 @@ import {
     StatusPlan,
 } from '../../../domain/entities/production-plan.entity';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class ProductionPlanRepository
     extends BaseRepository
     implements IProductionPlanRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new ProductionPlanRepository(tx as unknown as PrismaService);
+    }
+
     create(productionPlan: CreateProductionPlan): Promise<ProductionPlan> {
         return this.prisma.productionPlan.create({
             data: productionPlan,

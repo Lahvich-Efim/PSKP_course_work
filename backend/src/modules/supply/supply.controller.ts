@@ -12,8 +12,8 @@ import { SupplyService } from './supply.service';
 import {
     PaginatedResponseDto,
     PaginationDto,
-} from '../../shared/dto/pagination.dto';
-import { CurrentUser } from '../../shared/decorators/current_user.decorator';
+} from '../../common/dto/pagination.dto';
+import { CurrentUser } from '../../common/decorators/current_user.decorator';
 import { CreateSupplyDto } from './dto/create-supply.dto';
 import { UpdateSupplyDto } from './dto/update-supply.dto';
 import { SupplyResponseDto } from './dto/supply-response.dto';

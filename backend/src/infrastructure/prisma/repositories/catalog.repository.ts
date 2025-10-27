@@ -7,12 +7,22 @@ import {
     UpdateCatalog,
 } from '../../../domain/repositories/catalog.interface';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class CatalogRepository
     extends BaseRepository
     implements ICatalogRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new CatalogRepository(tx as unknown as PrismaService);
+    }
+
     async findOneById(catalogId: number): Promise<Catalog | null> {
         return this.prisma.catalog.findUnique({
             where: {

@@ -5,7 +5,7 @@ import {
     EntityAlreadyExistError,
     NotFoundError,
     SupplyException,
-} from '../../shared/exceptions/exceptions';
+} from '../../common/exceptions/exceptions';
 import { Supply, SupplyData } from '../../domain/entities/supply.entity';
 import { UserData } from '../../domain/entities/user.entity';
 import { PlanContextService } from '../../infrastructure/plan-context.service';

@@ -49,12 +49,23 @@ model Participant {
   @@map("participants")
 }
 
+model Production {
+  id          Int       @id @default(autoincrement())
+  name        String
+  unit        String
+  description String?
+  products    Product[]
+
+  @@map("productions")
+}
+
 model Product {
   id             Int         @id @default(autoincrement())
   participant_id Int
-  unit           String
+  production_id  Int
   name           String
   participant    Participant @relation(fields: [participant_id], references: [id], onDelete: Cascade)
+  production     Production  @relation(fields: [production_id], references: [id])
   catalogs       Catalog[]
 
   @@map("product")
@@ -69,6 +80,8 @@ model Catalog {
   plan           ProductionPlan @relation(fields: [plan_id], references: [id])
   supplier       Supply[]       @relation("SupplierRelation")
   consumer       Supply[]       @relation("ConsumerRelation")
+  agreement_supplier Agreement[] @relation("SupplierAgreement")
+  agreement_consumer Agreement[] @relation("ConsumerAgreement")
 
   @@unique([plan_id, product_id])
   @@map("catalogs")
@@ -79,19 +92,21 @@ model Supply {
   supplier_catalog_id Int
   consumer_catalog_id Int
   cost_factor         Float
-  supplier_catalog    Catalog               @relation(fields: [supplier_catalog_id], references: [id], onDelete: Cascade, name: "SupplierRelation")
-  consumer_catalog    Catalog               @relation(fields: [consumer_catalog_id], references: [id], onDelete: Cascade, name: "ConsumerRelation")
+  supplier_catalog    Catalog               @relation("SupplierRelation", fields: [supplier_catalog_id], references: [id], onDelete: Cascade)
+  consumer_catalog    Catalog               @relation("ConsumerRelation", fields: [consumer_catalog_id], references: [id], onDelete: Cascade)
   production_detail   ProductionPlanDetail?
+  agreement Agreement[]
 
   @@map("supplies")
 }
 
 model ProductionPlan {
-  id       Int                    @id @default(autoincrement())
-  period   DateTime
-  status   StatusProductionPlan
-  catalogs Catalog[]
-  details  ProductionPlanDetail[]
+  id           Int                    @id @default(autoincrement())
+  period_start DateTime
+  period_end   DateTime
+  status       StatusProductionPlan
+  catalogs     Catalog[]
+  details      ProductionPlanDetail[]
 
   @@map("production_plans")
 }
@@ -111,4 +126,36 @@ model ProductionPlanDetail {
   supply       Supply         @relation(fields: [supply_id], references: [id], onDelete: Cascade)
 
   @@map("production_plan_details")
+}
+
+model Agreement {
+  id                Int           @id @default(autoincrement())
+  supplier_id       Int
+  consumer_id       Int
+  cost_factor       Float
+  linked_supply_id  Int?
+  status            AgreementStatus     @default(PENDING)
+  supplier_status   AgreementSideStatus @default(PENDING)
+  consumer_status   AgreementSideStatus @default(PENDING)
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+
+  supplier          Catalog   @relation("SupplierAgreement", fields: [supplier_id], references: [id], onDelete: Cascade)
+  consumer          Catalog   @relation("ConsumerAgreement", fields: [consumer_id], references: [id], onDelete: Cascade)
+  linked_supply     Supply?   @relation(fields: [linked_supply_id], references: [id])
+
+  @@map("agreements")
+}
+
+enum AgreementStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum AgreementSideStatus {
+  PENDING
+  ACCEPTED
+  CANCELLED
 }

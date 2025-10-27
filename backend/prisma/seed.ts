@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import BcryptService from '../src/shared/utils/bcrypt-wrapper';
+import BcryptService from '../src/common/utils/bcrypt-wrapper';
 
 const prisma = new PrismaClient();
 

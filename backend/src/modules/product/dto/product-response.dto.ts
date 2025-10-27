@@ -14,16 +14,16 @@ export class ProductResponseDto {
     name: string;
 
     @ApiProperty({
-        description: 'Unit of measurement for the product',
-        example: 'кг',
-    })
-    @Expose()
-    unit: string;
-
-    @ApiProperty({
         description: 'Participant name',
         example: 'ООО Компания',
     })
     @Expose()
     participant_name: string;
+
+    @ApiProperty({
+        description: 'ID of the production',
+        example: 12,
+    })
+    @Expose()
+    production_id: number;
 }

@@ -6,12 +6,22 @@ import {
     UpdateCoordinator,
 } from '../../../domain/repositories/coordinator.interface';
 import { BaseRepository } from './base.repository';
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class CoordinatorRepository
     extends BaseRepository
     implements ICoordinatorRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new CoordinatorRepository(tx as unknown as PrismaService);
+    }
+
     create(coordinator: CreateCoordinator): Promise<Coordinator> {
         return this.prisma.coordinator.create({
             data: coordinator,

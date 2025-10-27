@@ -2,8 +2,8 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ProductionPlanService } from './production-plan.service';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { ProductionPlanResponseDto } from './dto/production-plan-response.dto';
-import { CurrentUser } from '../../shared/decorators/current_user.decorator';
-import { PaginationDto } from '../../shared/dto/pagination.dto';
+import { CurrentUser } from '../../common/decorators/current_user.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UserData } from '../../domain/entities/user.entity';
 import {
     ApiBadRequestResponse,

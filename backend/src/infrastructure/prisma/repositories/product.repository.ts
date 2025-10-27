@@ -1,20 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import {
+    CreateProduct,
     IProductRepository,
     ProductFilter,
+    UpdateProduct,
 } from '../../../domain/repositories/product.interface';
 import { Product } from '../../../domain/entities/product.entity';
 import { UserData } from '../../../domain/entities/user.entity';
 import { BaseRepository } from './base.repository';
-
-export type CreateProduct = Omit<Product, 'id'>;
-export type UpdateProduct = Partial<Product> & { id: number };
+import { PrismaService } from '../prisma.service';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class ProductRepository
     extends BaseRepository
     implements IProductRepository
 {
+    constructor(protected readonly prisma: PrismaService) {
+        super(prisma);
+    }
+
+    static withTransaction(tx: PrismaClient | Prisma.TransactionClient) {
+        return new ProductRepository(tx as unknown as PrismaService);
+    }
+
     async findOneById(productId: number): Promise<Product | null> {
         return this.prisma.product.findUnique({
             where: { id: productId },

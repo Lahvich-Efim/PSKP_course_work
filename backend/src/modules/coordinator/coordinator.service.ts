@@ -4,7 +4,7 @@ import {
     Coordinator,
     CoordinatorData,
 } from '../../domain/entities/coordinator.entity';
-import { NotFoundError } from '../../shared/exceptions/exceptions';
+import { NotFoundError } from '../../common/exceptions/exceptions';
 import { CreateCoordinatorDto } from './dto/coordinator.dto';
 import { COORDINATOR_REPOSITORY } from '../../domain/tokens';
 

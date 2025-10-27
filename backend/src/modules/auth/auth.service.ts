@@ -15,8 +15,8 @@ import {
     AuthException,
     EntityAlreadyExistError,
     UnauthorizedError,
-} from '../../shared/exceptions/exceptions';
-import BcryptService from '../../shared/utils/bcrypt-wrapper';
+} from '../../common/exceptions/exceptions';
+import BcryptService from '../../common/utils/bcrypt-wrapper';
 import { IUserRepository } from '../../domain/repositories/user.interface';
 import { ICoordinatorRepository } from '../../domain/repositories/coordinator.interface';
 import { IParticipantRepository } from '../../domain/repositories/participant.interface';

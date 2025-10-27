@@ -1,14 +1,16 @@
 import { Product } from '../entities/product.entity';
 import { EntityFilter } from '../../application/interfaces/filter.interface';
-import { User } from '../entities/user.entity';
 import { Catalog } from '../entities/catalog.entity';
+import { Production } from '../entities/production.entity';
+import { Participant } from '../entities/participant.entity';
 
 export type CreateProduct = Omit<Product, 'id'>;
 export type UpdateProduct = Partial<Product> & { id: number };
 
 interface ProductRelations {
     catalogs: Catalog[];
-    participant: User;
+    production: Production;
+    participant: Participant;
 }
 
 export type ProductFilter = EntityFilter<Product, ProductRelations>;

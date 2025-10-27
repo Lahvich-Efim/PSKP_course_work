@@ -4,13 +4,15 @@ export type StatusPlan = 'OPEN' | 'FINALIZED' | 'ARCHIVED';
 
 export type ProductionPlan = {
     id: number;
-    period: Date;
+    period_start: Date;
+    period_end: Date;
     status: StatusPlan;
 };
 
-export interface ProductionPlanData {
+export type ProductionPlanData = {
     id: number;
-    period: Date;
+    period_start: Date;
+    period_end: Date;
     status: string;
     catalogs: (CatalogData & {
         supplies: {
@@ -22,4 +24,4 @@ export interface ProductionPlanData {
         }[];
     })[];
     count: number;
-}
+};

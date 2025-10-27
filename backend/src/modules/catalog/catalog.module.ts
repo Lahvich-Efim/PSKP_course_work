@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { CatalogController } from './catalog.controller';
 import { CatalogService } from './catalog.service';
-import { SharedModule } from '../../shared/shared.module';
+import { CommonModule } from '../../common/common.module';
 import { InfrastructureModule } from '../../infrastructure/infrastructure.module';
 
 @Module({
-    imports: [InfrastructureModule, SharedModule],
+    imports: [InfrastructureModule, CommonModule],
     controllers: [CatalogController],
     providers: [CatalogService],
     exports: [CatalogService],
