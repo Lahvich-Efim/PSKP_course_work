@@ -26,6 +26,9 @@ export class NotFoundError extends BaseAPIError {}
 @HttpError(UnauthorizedException)
 export class UnauthorizedError extends BaseAPIError {}
 
+@HttpError(ConflictException)
+export class ConflictError extends BaseAPIError {}
+
 @HttpError(BadRequestException)
 export class AuthException extends BaseAPIError {}
 
@@ -35,11 +38,11 @@ export class SupplyException extends BaseAPIError {}
 @HttpError(ForbiddenException)
 export class AccessDeniedError extends BaseAPIError {}
 
-@HttpError(ConflictException)
-export class EntityAlreadyExistError extends BaseAPIError {}
+@HttpError(ForbiddenException)
+export class EntityAlreadyExistError extends ConflictError {}
 
 @HttpError(ConflictException)
-export class ProductionPlanException extends BaseAPIError {}
+export class ProductionPlanException extends ConflictError {}
 
 @HttpError(InternalServerErrorException)
 export class UnknownError extends BaseAPIError {}

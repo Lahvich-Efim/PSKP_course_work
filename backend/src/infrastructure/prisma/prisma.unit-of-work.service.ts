@@ -15,6 +15,7 @@ import { ParticipantRepository } from './repositories/participant.repository';
 import { Prisma } from '@prisma/client';
 import { ProductionRepository } from './repositories/production.repository';
 import { AgreementRepository } from './repositories/agreement.repository';
+import { ProductionRelationRepository } from './repositories/production-relation.repository';
 
 @Injectable()
 export class PrismaUnitOfWork implements IUnitOfWork {
@@ -47,6 +48,8 @@ export class PrismaUnitOfWork implements IUnitOfWork {
                         ProductionRepository.withTransaction(prismaTx),
                     agreementRepository:
                         AgreementRepository.withTransaction(prismaTx),
+                    productionRelationRepository:
+                        ProductionRelationRepository.withTransaction(prismaTx),
                 });
             },
         );

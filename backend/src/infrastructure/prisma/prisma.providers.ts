@@ -15,11 +15,13 @@ import {
     PRODUCT_REPOSITORY,
     PRODUCTION_PLAN_DETAIL_REPOSITORY,
     PRODUCTION_PLAN_REPOSITORY,
+    PRODUCTION_RELATION_REPOSITORY,
     PRODUCTION_REPOSITORY,
     SUPPLY_REPOSITORY,
     USER_REPOSITORY,
 } from '../../domain/tokens';
 import { AgreementRepository } from './repositories/agreement.repository';
+import { ProductionRelationRepository } from './repositories/production-relation.repository';
 
 export const prismaRepositoryProviders = [
     {
@@ -61,5 +63,9 @@ export const prismaRepositoryProviders = [
     {
         provide: AGREEMENT_REPOSITORY,
         useClass: AgreementRepository,
+    },
+    {
+        provide: PRODUCTION_RELATION_REPOSITORY,
+        useClass: ProductionRelationRepository,
     },
 ];

@@ -7,8 +7,8 @@ export type UpdateAgreement = Partial<CreateAgreement> & {
 };
 
 export interface AgreementRelations {
-    supplier: Agreement;
-    consumer: Agreement;
+    supplier_catalog: Agreement;
+    consumer_catalog: Agreement;
 }
 
 export type AgreementFilter = EntityFilter<Agreement, AgreementRelations>;

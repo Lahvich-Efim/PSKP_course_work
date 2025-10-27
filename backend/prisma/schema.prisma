@@ -50,13 +50,24 @@ model Participant {
 }
 
 model Production {
-  id          Int       @id @default(autoincrement())
-  name        String
-  unit        String
-  description String?
-  products    Product[]
+  id                           Int                  @id @default(autoincrement())
+  name                         String
+  unit                         String
+  description                  String?
+  products                     Product[]
+  production_relation          ProductionRelation[] @relation("ProductionRelationsAsProduct")
+  required_production_relation ProductionRelation[] @relation("ProductionRelationsAsRequired")
 
   @@map("productions")
+}
+
+model ProductionRelation {
+  id                     Int @id @default(autoincrement())
+  production_id          Int
+  required_production_id Int
+
+  production          Production @relation("ProductionRelationsAsProduct", fields: [production_id], references: [id], onDelete: Cascade)
+  required_production Production @relation("ProductionRelationsAsRequired", fields: [required_production_id], references: [id], onDelete: Cascade)
 }
 
 model Product {
@@ -72,16 +83,16 @@ model Product {
 }
 
 model Catalog {
-  id             Int            @id @default(autoincrement())
-  product_id     Int
-  plan_id        Int
-  desired_volume Float
-  product        Product        @relation(fields: [product_id], references: [id])
-  plan           ProductionPlan @relation(fields: [plan_id], references: [id])
-  supplier       Supply[]       @relation("SupplierRelation")
-  consumer       Supply[]       @relation("ConsumerRelation")
-  agreement_supplier Agreement[] @relation("SupplierAgreement")
-  agreement_consumer Agreement[] @relation("ConsumerAgreement")
+  id                 Int            @id @default(autoincrement())
+  product_id         Int
+  plan_id            Int
+  desired_volume     Float
+  product            Product        @relation(fields: [product_id], references: [id])
+  plan               ProductionPlan @relation(fields: [plan_id], references: [id])
+  supplier           Supply[]       @relation("SupplierRelation")
+  consumer           Supply[]       @relation("ConsumerRelation")
+  agreement_supplier Agreement[]    @relation("SupplierAgreement")
+  agreement_consumer Agreement[]    @relation("ConsumerAgreement")
 
   @@unique([plan_id, product_id])
   @@map("catalogs")
@@ -95,7 +106,7 @@ model Supply {
   supplier_catalog    Catalog               @relation("SupplierRelation", fields: [supplier_catalog_id], references: [id], onDelete: Cascade)
   consumer_catalog    Catalog               @relation("ConsumerRelation", fields: [consumer_catalog_id], references: [id], onDelete: Cascade)
   production_detail   ProductionPlanDetail?
-  agreement Agreement[]
+  agreement           Agreement[]
 
   @@map("supplies")
 }
@@ -129,20 +140,20 @@ model ProductionPlanDetail {
 }
 
 model Agreement {
-  id                Int           @id @default(autoincrement())
-  supplier_id       Int
-  consumer_id       Int
-  cost_factor       Float
-  linked_supply_id  Int?
-  status            AgreementStatus     @default(PENDING)
-  supplier_status   AgreementSideStatus @default(PENDING)
-  consumer_status   AgreementSideStatus @default(PENDING)
-  created_at        DateTime            @default(now())
-  updated_at        DateTime            @updatedAt
+  id                  Int                 @id @default(autoincrement())
+  supplier_catalog_id Int
+  consumer_catalog_id Int
+  cost_factor         Float
+  linked_supply_id    Int?
+  status              AgreementStatus     @default(PENDING)
+  supplier_status     AgreementSideStatus @default(PENDING)
+  consumer_status     AgreementSideStatus @default(PENDING)
+  created_at          DateTime            @default(now())
+  updated_at          DateTime            @updatedAt
 
-  supplier          Catalog   @relation("SupplierAgreement", fields: [supplier_id], references: [id], onDelete: Cascade)
-  consumer          Catalog   @relation("ConsumerAgreement", fields: [consumer_id], references: [id], onDelete: Cascade)
-  linked_supply     Supply?   @relation(fields: [linked_supply_id], references: [id])
+  supplier_catalog    Catalog @relation("SupplierAgreement", fields: [supplier_catalog_id], references: [id], onDelete: Cascade)
+  consumer_catalog    Catalog @relation("ConsumerAgreement", fields: [consumer_catalog_id], references: [id], onDelete: Cascade)
+  linked_supply       Supply? @relation(fields: [linked_supply_id], references: [id])
 
   @@map("agreements")
 }

@@ -8,6 +8,7 @@ import { IUserRepository } from '../../domain/repositories/user.interface';
 import { IProductionPlanDetailRepository } from '../../domain/repositories/production-plan-detail.interface';
 import { IProductionRepository } from '../../domain/repositories/production.interface';
 import { IAgreementRepository } from '../../domain/repositories/agreement.interface';
+import { IProductionRelationRepository } from '../../domain/repositories/production-relation.interface';
 
 export interface IUnitOfWork {
     runInTransaction<T>(
@@ -26,4 +27,5 @@ export interface ITransactionalRepositories {
     userRepository: IUserRepository;
     productionRepository: IProductionRepository;
     agreementRepository: IAgreementRepository;
+    productionRelationRepository: IProductionRelationRepository;
 }
