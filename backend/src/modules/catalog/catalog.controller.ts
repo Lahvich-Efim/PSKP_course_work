@@ -116,6 +116,25 @@ export class CatalogController {
         return this.catalogService.updateCatalog({ id, ...dto }, user);
     }
 
+    @Get('available-for-agreements')
+    @ApiOperation({ summary: 'Получить каталоги для создания соглашений' })
+    @ApiOkResponse({
+        description: 'Каталоги потенциальных поставщиков и потребителей',
+        type: PaginatedCatalogDto,
+    })
+    async getAvailableCatalogsForAgreements(
+        @Query() params: PaginationDto,
+        @CurrentUser() user: UserData,
+        @Query('direction') direction?: 'supplier' | 'consumer',
+    ): Promise<InstanceType<typeof PaginatedCatalogDto>> {
+        return this.catalogService.getAvailableCatalogsForAgreements(
+            user,
+            params.offset,
+            params.limit,
+            direction,
+        );
+    }
+
     @Delete(':id')
     @ApiOperation({ summary: 'Delete a catalog' })
     @ApiOkResponse({

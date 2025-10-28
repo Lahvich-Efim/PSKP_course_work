@@ -21,9 +21,11 @@ import {
     CATALOG_REPOSITORY,
     PARTICIPANT_REPOSITORY,
     PRODUCT_REPOSITORY,
+    PRODUCTION_RELATION_REPOSITORY,
     PRODUCTION_REPOSITORY,
 } from '../../domain/tokens';
 import { ProductionRepository } from '../../infrastructure/prisma/repositories/production.repository';
+import { IProductionRelationRepository } from '../../domain/repositories/production-relation.interface';
 
 @Injectable()
 export class CatalogService {
@@ -32,21 +34,20 @@ export class CatalogService {
         private readonly catalogRepo: ICatalogRepository,
         private readonly planContext: PlanContextService,
         @Inject(PRODUCTION_REPOSITORY)
-        private readonly productionRepository: ProductionRepository,
+        private readonly productionRepo: ProductionRepository,
         @Inject(PARTICIPANT_REPOSITORY)
         private readonly participantRepo: IParticipantRepository,
         @Inject(PRODUCT_REPOSITORY)
         private readonly productRepo: IProductRepository,
+        @Inject(PRODUCTION_RELATION_REPOSITORY)
+        private readonly productionRelationRepo: IProductionRelationRepository,
     ) {}
 
     private buildFilter(user: UserData, plan?: ProductionPlan): CatalogFilter {
         const filter: CatalogFilter = {};
         if (plan) {
             filter.plan_id = plan.id;
-        }
-        if (user.role === 'PARTICIPANT') {
-            filter.product = { is: { participant_id: user.id } };
-        } else if (user.role !== 'COORDINATOR') {
+        } else if (user.role !== 'COORDINATOR' && user.role !== 'PARTICIPANT') {
             throw new AccessDeniedError('Нет доступа к каталогу');
         }
         return filter;
@@ -60,7 +61,7 @@ export class CatalogService {
             await this.participantRepo.findOneById(participant_id);
         if (!participant) throw new Error('Участник не найден');
 
-        const production = await this.productionRepository.findOneById(
+        const production = await this.productionRepo.findOneById(
             product.production_id,
         );
         if (!production) throw new Error('Продукция не найден');
@@ -119,6 +120,96 @@ export class CatalogService {
             this.catalogRepo.count({ ...where, ...filter }),
         ]);
         const items = await Promise.all(raw.map((c) => this.toCatalogData(c)));
+        return { count, items };
+    }
+
+    async getAvailableCatalogsForAgreements(
+        user: UserData,
+        offset?: number,
+        limit?: number,
+        direction?: 'supplier' | 'consumer',
+    ): Promise<PaginatedResult<CatalogData>> {
+        if (user.role !== 'PARTICIPANT') {
+            throw new AccessDeniedError(
+                'Только участники могут просматривать доступные каталоги',
+            );
+        }
+
+        const plan = await this.planContext.getCurrentPlan();
+
+        const myCatalogs = await this.catalogRepo.findMany({
+            plan_id: plan.id,
+            product: { is: { participant_id: user.id } },
+        });
+
+        const myCatalogIds = myCatalogs.map((c) => c.id);
+        const myProductionIds = new Set<number>();
+
+        for (const cat of myCatalogs) {
+            const product = await this.productRepo.findOneById(cat.product_id);
+            if (product) myProductionIds.add(product.production_id);
+        }
+
+        const allRelations = await this.productionRelationRepo.findMany({});
+
+        const supplierProductionIds = new Set<number>();
+        const consumerProductionIds = new Set<number>();
+
+        for (const rel of allRelations) {
+            if (myProductionIds.has(rel.production_id)) {
+                supplierProductionIds.add(rel.required_production_id);
+            }
+            if (myProductionIds.has(rel.required_production_id)) {
+                consumerProductionIds.add(rel.production_id);
+            }
+        }
+
+        const targetProductionIds =
+            direction === 'supplier'
+                ? supplierProductionIds
+                : direction === 'consumer'
+                  ? consumerProductionIds
+                  : new Set([
+                        ...supplierProductionIds,
+                        ...consumerProductionIds,
+                    ]);
+
+        if (targetProductionIds.size === 0) {
+            return { count: 0, items: [] };
+        }
+
+        const [rawCatalogs, count] = await Promise.all([
+            this.catalogRepo.findMany(
+                {
+                    plan_id: plan.id,
+                    product: {
+                        is: {
+                            production_id: {
+                                in: Array.from(targetProductionIds),
+                            },
+                            participant_id: { not: user.id },
+                        },
+                    },
+                    NOT: { id: { in: myCatalogIds } },
+                },
+                offset,
+                limit,
+            ),
+            this.catalogRepo.count({
+                plan_id: plan.id,
+                product: {
+                    is: {
+                        production_id: { in: Array.from(targetProductionIds) },
+                        participant_id: { not: user.id },
+                    },
+                },
+                NOT: { id: { in: myCatalogIds } },
+            }),
+        ]);
+
+        const items = await Promise.all(
+            rawCatalogs.map((c) => this.toCatalogData(c)),
+        );
         return { count, items };
     }
 

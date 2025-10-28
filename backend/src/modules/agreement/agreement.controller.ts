@@ -72,6 +72,24 @@ export class AgreementController {
         return this.agreementService.getAgreement(id, user);
     }
 
+    @Get('potential/:catalogId')
+    @ApiOperation({ summary: 'Получить возможные соглашения для каталога' })
+    @ApiOkResponse({
+        description: 'Список потенциальных партнеров',
+    })
+    async getPotentialAgreements(
+        @Param('catalogId') catalogId: number,
+        @Query() params: PaginationDto,
+        @CurrentUser() user: UserData,
+    ) {
+        return this.agreementService.getPotentialAgreementsForCatalog(
+            catalogId,
+            user,
+            params.offset,
+            params.limit,
+        );
+    }
+
     @Post()
     @ApiOperation({ summary: 'Создать новое соглашение' })
     @ApiCreatedResponse({

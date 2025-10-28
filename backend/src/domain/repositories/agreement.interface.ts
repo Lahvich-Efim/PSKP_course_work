@@ -1,5 +1,6 @@
 import { Agreement } from '../entities/agreement.entity';
 import { EntityFilter } from '../../application/interfaces/filter.interface';
+import { Catalog } from '../entities/catalog.entity';
 
 export type CreateAgreement = Omit<Agreement, 'id'>;
 export type UpdateAgreement = Partial<CreateAgreement> & {
@@ -7,8 +8,8 @@ export type UpdateAgreement = Partial<CreateAgreement> & {
 };
 
 export interface AgreementRelations {
-    supplier_catalog: Agreement;
-    consumer_catalog: Agreement;
+    supplier_catalog: Catalog;
+    consumer_catalog: Catalog;
 }
 
 export type AgreementFilter = EntityFilter<Agreement, AgreementRelations>;

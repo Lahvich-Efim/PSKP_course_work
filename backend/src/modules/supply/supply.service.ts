@@ -22,7 +22,6 @@ import {
     UpdateSupply,
 } from '../../domain/repositories/supply.interface';
 import { PaginatedResult } from '../../domain/repositories/pagination.interface';
-import { IProductRepository } from '../../domain/repositories/product.interface';
 import { IProductionRelationRepository } from '../../domain/repositories/production-relation.interface';
 
 @Injectable()
@@ -32,8 +31,6 @@ export class SupplyService {
         private readonly supplyRepo: ISupplyRepository,
         private readonly planContext: PlanContextService,
         private readonly catalogService: CatalogService,
-        @Inject(PRODUCT_REPOSITORY)
-        private readonly productRepo: IProductRepository,
         @Inject(PRODUCTION_RELATION_REPOSITORY)
         private readonly productionRelationRepo: IProductionRelationRepository,
     ) {}
@@ -106,23 +103,14 @@ export class SupplyService {
             } as UserData),
         ]);
 
-        const [supplierProduct, consumerProduct] = await Promise.all([
-            this.productRepo.findOneById(supplierCatalog.product.id),
-            this.productRepo.findOneById(consumerCatalog.product.id),
-        ]);
-
-        if (!supplierProduct || !consumerProduct) {
-            throw new NotFoundError('Продукт не найден');
-        }
-
         const canSupply = await this.productionRelationRepo.existsLink(
-            supplierProduct.production_id,
-            consumerProduct.production_id,
+            supplierCatalog.product.production_id,
+            consumerCatalog.product.production_id,
         );
 
         if (!canSupply) {
             throw new SupplyException(
-                `Продукт "${supplierProduct.name}" не может поставляться для "${consumerProduct.name}". Обратитесь к координатору!.`,
+                `Продукт "${supplierCatalog.product.name}" не может поставляться для "${consumerCatalog.product.name}". Обратитесь к координатору!.`,
             );
         }
     }
@@ -179,10 +167,6 @@ export class SupplyService {
             throw new SupplyException('Неправильные каталоги поставки!');
         });
 
-        if (dto.consumer_catalog_id === dto.supplier_catalog_id) {
-            throw new SupplyException('Нельзя поставлять самому себе!');
-        }
-
         await this.validateProductCompatibility(
             dto.supplier_catalog_id,
             dto.consumer_catalog_id,
@@ -205,10 +189,6 @@ export class SupplyService {
 
     async updateSupply(dto: UpdateSupply, user: UserData): Promise<SupplyData> {
         const plan = await this.planContext.ensurePlanIsOpen();
-
-        if (dto.consumer_catalog_id === dto.supplier_catalog_id) {
-            throw new SupplyException('Нельзя поставлять самому себе!');
-        }
 
         const exists = await this.supplyRepo.findOne({
             id: dto.id,

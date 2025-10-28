@@ -10,10 +10,13 @@ import {
     PRODUCT_REPOSITORY,
     PRODUCTION_RELATION_REPOSITORY,
     PRODUCTION_REPOSITORY,
+    SUPPLY_REPOSITORY,
+    UNIT_OF_WORK,
 } from '../../domain/tokens';
 import { UserData } from '../../domain/entities/user.entity';
 import {
     AccessDeniedError,
+    ConflictError,
     EntityAlreadyExistError,
     NotFoundError,
     SupplyException,
@@ -31,6 +34,9 @@ import { PaginatedResult } from '../../domain/repositories/pagination.interface'
 import { IParticipantRepository } from '../../domain/repositories/participant.interface';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { IProductionRepository } from '../../domain/repositories/production.interface';
+import { ISupplyRepository } from '../../domain/repositories/supply.interface';
+import { IUnitOfWork } from '../../application/interfaces/unit-of-work.interface';
+import { Catalog, CatalogData } from 'src/domain/entities/catalog.entity';
 
 @Injectable()
 export class AgreementService {
@@ -47,6 +53,10 @@ export class AgreementService {
         private readonly productionRelationRepo: IProductionRelationRepository,
         @Inject(PARTICIPANT_REPOSITORY)
         private readonly participantRepo: IParticipantRepository,
+        @Inject(SUPPLY_REPOSITORY)
+        private readonly supplyRepository: ISupplyRepository,
+        @Inject(UNIT_OF_WORK)
+        private readonly unitOfWork: IUnitOfWork,
     ) {}
 
     private async toAgreementData(
@@ -172,6 +182,144 @@ export class AgreementService {
         return { count, items };
     }
 
+    async getPotentialAgreementsForCatalog(
+        catalogId: number,
+        user: UserData,
+        offset?: number,
+        limit?: number,
+    ): Promise<{
+        myCatalog: CatalogData;
+        potentialSuppliers: CatalogData[];
+        potentialConsumers: CatalogData[];
+        existingAgreements: AgreementData[];
+    }> {
+        if (user.role !== 'PARTICIPANT') {
+            throw new AccessDeniedError(
+                'Только участники могут просматривать соглашения',
+            );
+        }
+
+        const catalog = await this.catalogRepo.findOneById(catalogId);
+        if (!catalog) throw new NotFoundError('Каталог не найден');
+
+        const product = await this.productRepo.findOneById(catalog.product_id);
+        if (!product || product.participant_id !== user.id) {
+            throw new AccessDeniedError('Это не ваш каталог');
+        }
+
+        const production = await this.productionRepo.findOneById(
+            product.production_id,
+        );
+        if (!production) throw new NotFoundError('Производство не найдено');
+
+        const relations = await this.productionRelationRepo.findMany({
+            OR: [
+                { production_id: production.id },
+                { required_production_id: production.id },
+            ],
+        });
+
+        const supplierProductionIds = new Set<number>();
+        const consumerProductionIds = new Set<number>();
+
+        for (const rel of relations) {
+            if (rel.production_id === production.id) {
+                supplierProductionIds.add(rel.required_production_id);
+            }
+            if (rel.required_production_id === production.id) {
+                consumerProductionIds.add(rel.production_id);
+            }
+        }
+
+        const [supplierCatalogs, consumerCatalogs] = await Promise.all([
+            supplierProductionIds.size > 0
+                ? this.catalogRepo.findMany(
+                      {
+                          plan_id: catalog.plan_id,
+                          product: {
+                              is: {
+                                  production_id: {
+                                      in: Array.from(supplierProductionIds),
+                                  },
+                                  participant_id: { not: user.id },
+                              },
+                          },
+                      },
+                      offset,
+                      limit,
+                  )
+                : [],
+            consumerProductionIds.size > 0
+                ? this.catalogRepo.findMany(
+                      {
+                          plan_id: catalog.plan_id,
+                          product: {
+                              is: {
+                                  production_id: {
+                                      in: Array.from(consumerProductionIds),
+                                  },
+                                  participant_id: { not: user.id },
+                              },
+                          },
+                      },
+                      offset,
+                      limit,
+                  )
+                : [],
+        ]);
+
+        const existingAgreements = await this.agreementRepo.findMany({
+            OR: [
+                { supplier_catalog_id: catalogId },
+                { consumer_catalog_id: catalogId },
+            ],
+        });
+
+        const [myCatalogData, suppliersData, consumersData, agreementsData] =
+            await Promise.all([
+                this.toCatalogData(catalog),
+                Promise.all(supplierCatalogs.map((c) => this.toCatalogData(c))),
+                Promise.all(consumerCatalogs.map((c) => this.toCatalogData(c))),
+                Promise.all(
+                    existingAgreements.map((a) => this.toAgreementData(a)),
+                ),
+            ]);
+
+        return {
+            myCatalog: myCatalogData,
+            potentialSuppliers: suppliersData,
+            potentialConsumers: consumersData,
+            existingAgreements: agreementsData,
+        };
+    }
+
+    private async toCatalogData(catalog: Catalog): Promise<CatalogData> {
+        const product = await this.productRepo.findOneById(catalog.product_id);
+        if (!product) throw new NotFoundError('Продукт не найден');
+
+        const participant = await this.participantRepo.findOneById(
+            product.participant_id,
+        );
+        if (!participant) throw new NotFoundError('Участник не найден');
+
+        const production = await this.productionRepo.findOneById(
+            product.production_id,
+        );
+        if (!production) throw new NotFoundError('Производство не найдено');
+
+        return {
+            id: catalog.id,
+            desired_volume: catalog.desired_volume,
+            product: {
+                id: product.id,
+                name: product.name,
+                unit: production.unit,
+                production_id: product.production_id,
+                participant_name: participant.name,
+            },
+        };
+    }
+
     async createAgreement(
         dto: CreateAgreementDto,
         user: UserData,
@@ -200,6 +348,7 @@ export class AgreementService {
             throw new NotFoundError('Продукт не найден');
         }
 
+        // Проверяем совместимость через production_relation
         const canSupply = await this.productionRelationRepo.existsLink(
             supplierProduct.production_id,
             consumerProduct.production_id,
@@ -213,21 +362,20 @@ export class AgreementService {
 
         if (dto.supplier_catalog_id === dto.consumer_catalog_id) {
             throw new SupplyException(
-                'Нельзя создать соглашение с самим собой',
+                'Нельзя создать соглашение с самим собой (одним каталогом)',
             );
         }
 
-        // Проверяем, что пользователь - владелец одного из каталогов
         const isSupplier = supplierProduct.participant_id === user.id;
         const isConsumer = consumerProduct.participant_id === user.id;
 
         if (!isSupplier && !isConsumer) {
             throw new AccessDeniedError(
-                'Вы должны быть поставщиком или потребителем',
+                'Вы должны быть поставщиком или потребителем в этом соглашении',
             );
         }
 
-        // Проверяем на дубликаты
+        // Проверяем, нет ли уже активного соглашения
         const existing = await this.agreementRepo.findOne({
             supplier_catalog_id: dto.supplier_catalog_id,
             consumer_catalog_id: dto.consumer_catalog_id,
@@ -236,8 +384,35 @@ export class AgreementService {
 
         if (existing) {
             throw new EntityAlreadyExistError(
-                'Такое соглашение уже существует',
+                'Активное соглашение уже существует',
             );
+        }
+
+        // **КЛЮЧЕВОЕ ИЗМЕНЕНИЕ**: если оба каталога принадлежат одному участнику,
+        // автоматически создаём соглашение со статусом COMPLETED и Supply
+        const isSameParticipant =
+            supplierProduct.participant_id === consumerProduct.participant_id;
+
+        if (isSameParticipant) {
+            return this.unitOfWork.runInTransaction(async (tx) => {
+                const { agreementRepository, supplyRepository } = tx;
+
+                const supply = await supplyRepository.create({
+                    supplier_catalog_id: dto.supplier_catalog_id,
+                    consumer_catalog_id: dto.consumer_catalog_id,
+                    cost_factor: dto.cost_factor,
+                });
+
+                const agreement = await agreementRepository.create({
+                    ...dto,
+                    status: 'COMPLETED',
+                    supplier_status: 'ACCEPTED',
+                    consumer_status: 'ACCEPTED',
+                    linked_supply_id: supply.id,
+                });
+
+                return this.toAgreementData(agreement);
+            });
         }
 
         const agreement = await this.agreementRepo.create({
@@ -267,7 +442,6 @@ export class AgreementService {
             throw new NotFoundError('Соглашение не найдено');
         }
 
-        // Проверяем участие
         const [supplierCatalog, consumerCatalog] = await Promise.all([
             this.catalogRepo.findOneById(agreement.supplier_catalog_id),
             this.catalogRepo.findOneById(agreement.consumer_catalog_id),
@@ -286,6 +460,15 @@ export class AgreementService {
             throw new NotFoundError('Продукт не найден');
         }
 
+        // **ВАЖНО**: проверяем, что это не внутреннее соглашение
+        const isSameParticipant =
+            supplierProduct.participant_id === consumerProduct.participant_id;
+        if (isSameParticipant) {
+            throw new AccessDeniedError(
+                'Внутренние соглашения нельзя изменять через этот эндпоинт',
+            );
+        }
+
         const isSupplier = supplierProduct.participant_id === user.id;
         const isConsumer = consumerProduct.participant_id === user.id;
 
@@ -300,6 +483,7 @@ export class AgreementService {
         if (action === 'cancel') {
             if (isSupplier) newSupplierStatus = 'CANCELLED';
             if (isConsumer) newConsumerStatus = 'CANCELLED';
+
             newStatus = 'CANCELLED';
         } else if (action === 'accept') {
             if (isSupplier) newSupplierStatus = 'ACCEPTED';
@@ -309,18 +493,54 @@ export class AgreementService {
                 newSupplierStatus === 'ACCEPTED' &&
                 newConsumerStatus === 'ACCEPTED'
             ) {
+                newStatus = 'COMPLETED';
+            } else {
                 newStatus = 'ACTIVE';
             }
         }
 
-        const updated = await this.agreementRepo.update({
-            id,
-            supplier_status: newSupplierStatus,
-            consumer_status: newConsumerStatus,
-            status: newStatus,
-        });
+        return this.unitOfWork
+            .runInTransaction(async (tx) => {
+                const { agreementRepository, supplyRepository } = tx;
 
-        return this.toAgreementData(updated);
+                if (newStatus === 'COMPLETED') {
+                    const supply = await supplyRepository.create({
+                        supplier_catalog_id: agreement.supplier_catalog_id,
+                        consumer_catalog_id: agreement.consumer_catalog_id,
+                        cost_factor: agreement.cost_factor,
+                    });
+
+                    return agreementRepository.update({
+                        id,
+                        supplier_status: newSupplierStatus,
+                        consumer_status: newConsumerStatus,
+                        status: newStatus,
+                        linked_supply_id: supply.id,
+                    });
+                } else if (newStatus === 'CANCELLED') {
+                    if (agreement.linked_supply_id) {
+                        await supplyRepository.delete(
+                            agreement.linked_supply_id,
+                        );
+                    }
+
+                    return agreementRepository.update({
+                        id,
+                        supplier_status: newSupplierStatus,
+                        consumer_status: newConsumerStatus,
+                        status: newStatus,
+                        linked_supply_id: null,
+                    });
+                } else {
+                    return agreementRepository.update({
+                        id,
+                        supplier_status: newSupplierStatus,
+                        consumer_status: newConsumerStatus,
+                        status: newStatus,
+                    });
+                }
+            })
+            .then((updated) => this.toAgreementData(updated));
     }
 
     async deleteAgreement(id: number, user: UserData): Promise<AgreementData> {
@@ -354,6 +574,11 @@ export class AgreementService {
             if (!isSupplier && !isConsumer) {
                 throw new AccessDeniedError(
                     'Вы не можете удалить это соглашение',
+                );
+            }
+            if (agreement.linked_supply_id) {
+                throw new ConflictError(
+                    'Вы не можете удалить это соглашение, когда принята обоим участником',
                 );
             }
         } else if (user.role !== 'COORDINATOR') {
