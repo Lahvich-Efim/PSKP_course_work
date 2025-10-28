@@ -22,6 +22,7 @@ import {
     PRODUCT_REPOSITORY,
     PRODUCTION_PLAN_DETAIL_REPOSITORY,
     PRODUCTION_PLAN_REPOSITORY,
+    PRODUCTION_REPOSITORY,
     SUPPLY_REPOSITORY,
 } from '../../domain/tokens';
 import { IProductionPlanRepository } from '../../domain/repositories/production-plan.interface';
@@ -30,6 +31,8 @@ import { ICatalogRepository } from '../../domain/repositories/catalog.interface'
 import { ISupplyRepository } from '../../domain/repositories/supply.interface';
 import { IProductionPlanDetailRepository } from '../../domain/repositories/production-plan-detail.interface';
 import { IParticipantRepository } from '../../domain/repositories/participant.interface';
+import { IProductionRepository } from '../../domain/repositories/production.interface';
+import { Production } from '../../domain/entities/production.entity';
 
 @Injectable()
 export class ProductionPlanService {
@@ -46,6 +49,8 @@ export class ProductionPlanService {
         private readonly detailRepository: IProductionPlanDetailRepository,
         @Inject(PARTICIPANT_REPOSITORY)
         private readonly participantRepository: IParticipantRepository,
+        @Inject(PRODUCTION_REPOSITORY)
+        private readonly productionRepository: IProductionRepository,
     ) {}
 
     async getLastProductionPlan(
@@ -111,8 +116,18 @@ export class ProductionPlanService {
         const participantIds = new Set<number>(
             products.map((p) => p.participant_id),
         );
+        const productionIds = new Set<number>(
+            products.map((p) => p.production_id),
+        );
+
         const participants = await this.participantRepository.findMany({
             OR: Array.from(participantIds).map((id) => ({ id })),
+        });
+
+        const productions = await this.productionRepository.findMany({
+            OR: Array.from(productionIds).map((id) => ({
+                id,
+            })),
         });
 
         const peerIds = supplies.flatMap((s) => [
@@ -133,6 +148,7 @@ export class ProductionPlanService {
             details,
             products,
             participants,
+            productions,
             total,
         );
     }
@@ -207,13 +223,15 @@ export class ProductionPlanService {
         details: ProductionPlanDetail[],
         products: Product[],
         participants: Participant[],
+        productions: Production[],
         total: number,
     ): ProductionPlanData {
-        const prodMap = new Map(products.map((p) => [p.id, p]));
+        const productMap = new Map(products.map((p) => [p.id, p]));
         const partMap = new Map(participants.map((p) => [p.id, p.name]));
         const detailMap = new Map(
             details.map((d) => [d.supply_id, d.final_amount]),
         );
+        const productionMap = new Map(productions.map((p) => [p.id, p]));
         const allCatalogsMap = new Map(allCatalogs.map((c) => [c.id, c]));
 
         const suppliesByCatalog = new Map<number, Supply[]>();
@@ -227,8 +245,9 @@ export class ProductionPlanService {
         }
 
         const catalogs = pageCatalogs.map((cat) => {
-            const prod = prodMap.get(cat.product_id)!;
+            const prod = productMap.get(cat.product_id)!;
             const owner = partMap.get(prod.participant_id)!;
+            const production = productionMap.get(prod.production_id)!;
 
             const suppliesList =
                 suppliesByCatalog.get(cat.id)?.map((s) => {
@@ -240,7 +259,7 @@ export class ProductionPlanService {
                         ? s.consumer_catalog_id
                         : s.supplier_catalog_id;
                     const peerCat = allCatalogsMap.get(peerId)!;
-                    const peerProd = prodMap.get(peerCat.product_id)!;
+                    const peerProd = productMap.get(peerCat.product_id)!;
                     return {
                         id: s.id,
                         cost_factor: s.cost_factor,
@@ -253,6 +272,8 @@ export class ProductionPlanService {
                                 participant_name: partMap.get(
                                     peerProd.participant_id,
                                 )!,
+                                unit: productionMap.get(peerProd.production_id)!
+                                    .unit,
                             },
                         },
                     };
@@ -263,6 +284,7 @@ export class ProductionPlanService {
                 product: {
                     ...prod,
                     participant_name: owner,
+                    unit: production.unit,
                 },
                 desired_volume: cat.desired_volume,
                 supplies: suppliesList,

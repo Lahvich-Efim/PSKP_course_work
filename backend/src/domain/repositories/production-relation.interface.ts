@@ -20,7 +20,11 @@ export interface IProductionRelationRepository {
         product_id: number,
     ): Promise<boolean>;
 
-    findMany(where?: ProductionRelationFilter): Promise<ProductionRelation[]>;
+    findMany(
+        where?: ProductionRelationFilter,
+        offset?: number,
+        limit?: number,
+    ): Promise<ProductionRelation[]>;
 
     findOne(
         where?: ProductionRelationFilter,
@@ -33,4 +37,6 @@ export interface IProductionRelationRepository {
     create(data: CreateProductionRelation): Promise<ProductionRelation>;
 
     delete(id: number): Promise<ProductionRelation>;
+
+    count(where?: ProductionRelationFilter): Promise<number>;
 }

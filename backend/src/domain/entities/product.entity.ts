@@ -7,4 +7,5 @@ export type Product = {
 
 export type ProductData = Omit<Product, 'participant_id'> & {
     participant_name: string;
+    unit: string;
 };

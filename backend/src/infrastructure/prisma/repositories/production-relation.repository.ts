@@ -44,8 +44,14 @@ export class ProductionRelationRepository
 
     async findMany(
         where?: ProductionRelationFilter,
+        offset?: number,
+        limit?: number,
     ): Promise<ProductionRelation[]> {
-        return this.prisma.productionRelation.findMany({ where });
+        return this.prisma.productionRelation.findMany({
+            where,
+            skip: offset,
+            take: limit,
+        });
     }
 
     async findOne(
@@ -62,5 +68,9 @@ export class ProductionRelationRepository
 
     async delete(id: number): Promise<ProductionRelation> {
         return this.prisma.productionRelation.delete({ where: { id } });
+    }
+
+    async count(where?: ProductionRelationFilter): Promise<number> {
+        return this.prisma.productionRelation.count({ where });
     }
 }

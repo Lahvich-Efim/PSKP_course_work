@@ -31,6 +31,8 @@ import {
     PaginationDto,
 } from '../../common/dto/pagination.dto';
 import { CurrentUser } from '../../common/decorators/current_user.decorator';
+import { ParseJsonDtoPipe } from '../../common/pipe/parse_json.pipe';
+import { CatalogFilterDto } from './dto/catalog-filter.dto';
 
 const PaginatedCatalogDto = PaginatedResponseDto(CatalogResponseDto);
 
@@ -52,9 +54,16 @@ export class CatalogController {
     async getAllActualityCatalogs(
         @Query() params: PaginationDto,
         @CurrentUser() user: UserData,
+        @Query('filter', new ParseJsonDtoPipe(CatalogFilterDto))
+        filterDto: CatalogFilterDto,
     ): Promise<InstanceType<typeof PaginatedCatalogDto>> {
         const { offset, limit } = params;
-        return this.catalogService.getActualityCatalogs(user, offset, limit);
+        return this.catalogService.getActualityCatalogs(
+            user,
+            offset,
+            limit,
+            filterDto,
+        );
     }
 
     @Get(':id')

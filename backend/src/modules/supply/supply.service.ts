@@ -10,7 +10,11 @@ import { Supply, SupplyData } from '../../domain/entities/supply.entity';
 import { UserData } from '../../domain/entities/user.entity';
 import { PlanContextService } from '../../infrastructure/plan-context.service';
 import { ProductionPlan } from '../../domain/entities/production-plan.entity';
-import { SUPPLY_REPOSITORY } from '../../domain/tokens';
+import {
+    SUPPLY_REPOSITORY,
+    PRODUCT_REPOSITORY,
+    PRODUCTION_RELATION_REPOSITORY,
+} from '../../domain/tokens';
 import {
     CreateSupply,
     ISupplyRepository,
@@ -18,6 +22,8 @@ import {
     UpdateSupply,
 } from '../../domain/repositories/supply.interface';
 import { PaginatedResult } from '../../domain/repositories/pagination.interface';
+import { IProductRepository } from '../../domain/repositories/product.interface';
+import { IProductionRelationRepository } from '../../domain/repositories/production-relation.interface';
 
 @Injectable()
 export class SupplyService {
@@ -26,6 +32,10 @@ export class SupplyService {
         private readonly supplyRepo: ISupplyRepository,
         private readonly planContext: PlanContextService,
         private readonly catalogService: CatalogService,
+        @Inject(PRODUCT_REPOSITORY)
+        private readonly productRepo: IProductRepository,
+        @Inject(PRODUCTION_RELATION_REPOSITORY)
+        private readonly productionRelationRepo: IProductionRelationRepository,
     ) {}
 
     private buildFilter(user: UserData, plan?: ProductionPlan): SupplyFilter {
@@ -81,6 +91,40 @@ export class SupplyService {
         const entity = await this.supplyRepo.findOne({ id, ...filter });
         if (!entity) throw new NotFoundError(`Поставка с id ${id} не найдена`);
         return this.toSupplyData(entity, user);
+    }
+
+    private async validateProductCompatibility(
+        supplierCatalogId: number,
+        consumerCatalogId: number,
+    ): Promise<void> {
+        const [supplierCatalog, consumerCatalog] = await Promise.all([
+            this.catalogService.getCatalog(supplierCatalogId, {
+                role: 'COORDINATOR',
+            } as UserData),
+            this.catalogService.getCatalog(consumerCatalogId, {
+                role: 'COORDINATOR',
+            } as UserData),
+        ]);
+
+        const [supplierProduct, consumerProduct] = await Promise.all([
+            this.productRepo.findOneById(supplierCatalog.product.id),
+            this.productRepo.findOneById(consumerCatalog.product.id),
+        ]);
+
+        if (!supplierProduct || !consumerProduct) {
+            throw new NotFoundError('Продукт не найден');
+        }
+
+        const canSupply = await this.productionRelationRepo.existsLink(
+            supplierProduct.production_id,
+            consumerProduct.production_id,
+        );
+
+        if (!canSupply) {
+            throw new SupplyException(
+                `Продукт "${supplierProduct.name}" не может поставляться для "${consumerProduct.name}". Обратитесь к координатору!.`,
+            );
+        }
     }
 
     async getSupply(supplyId: number, user: UserData): Promise<SupplyData> {
@@ -139,6 +183,11 @@ export class SupplyService {
             throw new SupplyException('Нельзя поставлять самому себе!');
         }
 
+        await this.validateProductCompatibility(
+            dto.supplier_catalog_id,
+            dto.consumer_catalog_id,
+        );
+
         if (
             await this.supplyRepo.findOne({
                 consumer_catalog_id: dto.consumer_catalog_id,
@@ -167,17 +216,21 @@ export class SupplyService {
         });
         if (!exists) throw new NotFoundError(`Поставка ${dto.id} не найдена`);
 
+        if (dto.supplier_catalog_id || dto.consumer_catalog_id) {
+            await this.validateProductCompatibility(
+                dto.supplier_catalog_id || exists.supplier_catalog_id,
+                dto.consumer_catalog_id || exists.consumer_catalog_id,
+            );
+        }
+
         const conflict = await this.supplyRepo.findOne({
-            consumer_catalog_id: dto.consumer_catalog_id,
-            supplier_catalog_id: dto.supplier_catalog_id,
+            consumer_catalog_id:
+                dto.consumer_catalog_id || exists.consumer_catalog_id,
+            supplier_catalog_id:
+                dto.supplier_catalog_id || exists.supplier_catalog_id,
             NOT: { id: dto.id },
         });
-        console.log({
-            consumer_catalog_id: dto.consumer_catalog_id,
-            supplier_catalog_id: dto.supplier_catalog_id,
-            id: dto.id,
-        });
-        console.log(conflict);
+
         if (conflict) {
             throw new EntityAlreadyExistError(
                 'Данная поставка уже существует!',

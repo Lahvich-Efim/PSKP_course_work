@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { Expose } from 'class-transformer';
 
 export class UpdateProductionDto {
     @ApiProperty({
@@ -16,7 +15,8 @@ export class UpdateProductionDto {
         description: 'Unit of measurement for the product',
         example: 'кг',
     })
-    @Expose()
+    @IsString()
+    @IsOptional()
     unit?: string;
 
     @ApiProperty({

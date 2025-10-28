@@ -21,7 +21,9 @@ import {
     CATALOG_REPOSITORY,
     PARTICIPANT_REPOSITORY,
     PRODUCT_REPOSITORY,
+    PRODUCTION_REPOSITORY,
 } from '../../domain/tokens';
+import { ProductionRepository } from '../../infrastructure/prisma/repositories/production.repository';
 
 @Injectable()
 export class CatalogService {
@@ -29,6 +31,8 @@ export class CatalogService {
         @Inject(CATALOG_REPOSITORY)
         private readonly catalogRepo: ICatalogRepository,
         private readonly planContext: PlanContextService,
+        @Inject(PRODUCTION_REPOSITORY)
+        private readonly productionRepository: ProductionRepository,
         @Inject(PARTICIPANT_REPOSITORY)
         private readonly participantRepo: IParticipantRepository,
         @Inject(PRODUCT_REPOSITORY)
@@ -56,12 +60,18 @@ export class CatalogService {
             await this.participantRepo.findOneById(participant_id);
         if (!participant) throw new Error('Участник не найден');
 
+        const production = await this.productionRepository.findOneById(
+            product.production_id,
+        );
+        if (!production) throw new Error('Продукция не найден');
+
         return {
             id: c.id,
             desired_volume: c.desired_volume,
             product: {
                 ...prod,
                 participant_name: participant.name,
+                unit: production.unit,
             },
         };
     }
@@ -100,12 +110,13 @@ export class CatalogService {
         user: UserData,
         offset?: number,
         limit?: number,
+        where?: CatalogFilter,
     ): Promise<PaginatedResult<CatalogData>> {
         const plan = await this.planContext.getCurrentPlan();
         const filter = this.buildFilter(user, plan);
         const [raw, count] = await Promise.all([
-            this.catalogRepo.findMany(filter, offset, limit),
-            this.catalogRepo.count(filter),
+            this.catalogRepo.findMany({ ...where, ...filter }, offset, limit),
+            this.catalogRepo.count({ ...where, ...filter }),
         ]);
         const items = await Promise.all(raw.map((c) => this.toCatalogData(c)));
         return { count, items };

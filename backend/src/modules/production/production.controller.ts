@@ -9,7 +9,12 @@ import {
     Query,
 } from '@nestjs/common';
 import { ProductionService } from './production.service';
-import { ApiOperation } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiCookieAuth,
+    ApiOperation,
+    ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current_user.decorator';
 import { UserData } from '../../domain/entities/user.entity';
 import {
@@ -22,6 +27,9 @@ import { CreateProductionDto } from './dto/create-production.dto';
 
 const PaginatedProductionDto = PaginatedResponseDto(ProductionResponseDto);
 
+@ApiBearerAuth()
+@ApiCookieAuth()
+@ApiTags('Production Relations')
 @Controller('productions')
 export class ProductionController {
     constructor(private readonly productionService: ProductionService) {}

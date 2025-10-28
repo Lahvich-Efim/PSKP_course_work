@@ -12,6 +12,7 @@ import {
     CATALOG_REPOSITORY,
     PARTICIPANT_REPOSITORY,
     PRODUCT_REPOSITORY,
+    PRODUCTION_REPOSITORY,
 } from '../../domain/tokens';
 import {
     CreateProduct,
@@ -22,12 +23,15 @@ import {
 import { ICatalogRepository } from '../../domain/repositories/catalog.interface';
 import { IParticipantRepository } from '../../domain/repositories/participant.interface';
 import { PaginatedResult } from '../../domain/repositories/pagination.interface';
+import { IProductionRepository } from '../../domain/repositories/production.interface';
 
 @Injectable()
 export class ProductService {
     constructor(
         @Inject(PRODUCT_REPOSITORY)
         private readonly repository: IProductRepository,
+        @Inject(PRODUCTION_REPOSITORY)
+        private readonly productionRepository: IProductionRepository,
         private readonly planContext: PlanContextService,
         @Inject(CATALOG_REPOSITORY)
         private readonly catalogRepository: ICatalogRepository,
@@ -44,8 +48,18 @@ export class ProductService {
                 `Участник продукта '${product.name}' по какой то причине отсутствует`,
             );
         }
+
+        const production = await this.productionRepository.findOneById(
+            product.production_id,
+        );
+        if (!production) {
+            throw new UnknownError(
+                `Продукция для продукта '${product.name} по какой то причине отсутствует'`,
+            );
+        }
         return {
             ...rest,
+            unit: production.unit,
             participant_name: participant.name,
         };
     }

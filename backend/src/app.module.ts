@@ -14,7 +14,6 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt.guard';
 import { ProductionModule } from './modules/production/production.module';
 import { ParticipantModule } from './modules/participant/participant.module';
 import { CoordinatorModule } from './modules/coordinator/coordinator.module';
-import { AgreementController } from './modules/agreement/agreement.controller';
 import { AgreementModule } from './modules/agreement/agreement.module';
 import { ProductionRelationModule } from './modules/production-relation/production-relation.module';
 
@@ -34,7 +33,7 @@ import { ProductionRelationModule } from './modules/production-relation/producti
         AgreementModule,
         ProductionRelationModule,
     ],
-    controllers: [AppController, AgreementController],
+    controllers: [AppController],
     providers: [
         AppService,
         {

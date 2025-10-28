@@ -1,6 +1,5 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
 
 export class CreateProductionDto {
     @ApiProperty({ description: 'Name of the production', example: 'Металл' })
@@ -12,7 +11,8 @@ export class CreateProductionDto {
         description: 'Unit of measurement for the product',
         example: 'кг',
     })
-    @Expose()
+    @IsString()
+    @IsOptional()
     unit: string;
 
     @ApiProperty({
